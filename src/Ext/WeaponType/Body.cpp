@@ -16,6 +16,12 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 
 	INI_EX exINI(pINI);
 
+	pINI->ReadString(pSection, "RadType", "", Phobos::readBuffer);
+	auto Index = RadType::FindIndex(Phobos::readBuffer);
+	auto Final = Index == -1 ? 0 : Index;
+	this->RadTypeIndex = Final;
+	//	Debug::Log("Weapon [%s] ,RadIDX %d \n ",pThis->ID , Index);
+
 	this->DiskLaser_Radius.Read(exINI, pSection, "DiskLaser.Radius");
 	this->DiskLaser_Circumference = (int)(this->DiskLaser_Radius * Math::Pi * 2);
 }
@@ -23,11 +29,13 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 void WeaponTypeExt::ExtData::LoadFromStream(IStream* Stm) {
 	// this->DiskLaser_Radius.Load(Stm); // There is no need to this. It is used only for LoadFromINIFile
 	this->DiskLaser_Circumference.Load(Stm);
+	this->RadTypeIndex.Load(Stm);
 }
 
 void WeaponTypeExt::ExtData::SaveToStream(IStream* Stm) const {
 	// this->DiskLaser_Radius.Save(Stm); // There is no need to this. It is used only for LoadFromINIFile
 	this->DiskLaser_Circumference.Save(Stm);
+	this->RadTypeIndex.Save(Stm);
 }
 
 // =============================

@@ -5,7 +5,7 @@
 
 #include "../_Container.hpp"
 #include "../../Phobos.h"
-
+#include "../../Enum/RadTypes.h"
 #include "../../Utilities/Debug.h"
 
 #include "../../Utilities/TemplateDef.h"
@@ -21,10 +21,11 @@ public:
 
 		Valueable<double> DiskLaser_Radius;
 		Valueable<int> DiskLaser_Circumference;
-
+		Nullable<int> RadTypeIndex;
 		ExtData(WeaponTypeClass* OwnerObject) : Extension<WeaponTypeClass>(OwnerObject),
 			DiskLaser_Radius(38.2),
-			DiskLaser_Circumference(240)
+			DiskLaser_Circumference(240),
+			RadTypeIndex(0)
 		{ }
 
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
