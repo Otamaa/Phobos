@@ -44,7 +44,6 @@ public:
 	static double GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell);
 	//static void RadSiteClass_Radiate(RadSiteClass* pThis);
 	
-
 	class ExtContainer final : public Container<RadSiteExt> {
 	public:
 		ExtContainer();
