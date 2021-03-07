@@ -1,4 +1,3 @@
-#include "Body.h"
 #include <BulletClass.h>
 #include <HouseClass.h>
 
@@ -37,9 +36,8 @@ DEFINE_HOOK(679A15, RulesData_LoadBeforeTypeData, 6)
 	return 0;
 }
 
-//5
-//yeah , no
-DEFINE_HOOK(469150, B_Detonate_ApplyRad, 5) {
+DEFINE_HOOK(469150, B_Detonate_ApplyRad, 5)
+{
 	GET(BulletClass * const, pThis, ESI);
 	GET_BASE(CoordStruct const*, pCoords, 0x8);
 
@@ -107,7 +105,8 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 }
 
 // Too OP , be aware
-DEFINE_HOOK(43FB23, BuildingClass_Update, 5) {
+DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
+{
 	GET(BuildingClass * const, pThis, ECX);
 
 	auto const MainCoords = pThis->GetMapCoords();
@@ -168,7 +167,6 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5) {
 	return 0;
 }
 
-
 // be aware that this function is updated every frame 
 // putting debug log here can become mess because it gonna print bunch of debug line
 DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
@@ -220,7 +218,6 @@ DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 	return pThis->IsAlive ? 0x4DA63Bu : 0x4DAF00;
 }
 
-
 DEFINE_HOOK(65B593, RadSiteClass_Activate_Delay, 6)
 {
 	GET(RadSiteClass * const, pThis, ECX);
@@ -240,7 +237,8 @@ DEFINE_HOOK(65B593, RadSiteClass_Activate_Delay, 6)
 	return 0x65B59F;
 }
 
-DEFINE_HOOK(65B5CE, RadSiteClass_Activate_Color, 6) {
+DEFINE_HOOK(65B5CE, RadSiteClass_Activate_Color, 6)
+{
 	GET(RadSiteClass * const, pThis, ESI);
 
 	auto pExt = RadSiteExt::ExtMap.Find(pThis);
@@ -274,7 +272,7 @@ DEFINE_HOOK(65B63E, RadSiteClass_Activate_LightFactor, 6)
 
 DEFINE_HOOK_AGAIN(65B6A0, RadSiteClass_Activate_TintFactor, 6)
 DEFINE_HOOK_AGAIN(65B6CA, RadSiteClass_Activate_TintFactor, 6)
-DEFINE_HOOK(65B6F2, RadSiteClass_Activate_5, 6)
+DEFINE_HOOK(65B6F2, RadSiteClass_Activate_TintFactor, 6)
 {
 	GET(RadSiteClass * const, Rad, ESI);
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
@@ -292,9 +290,9 @@ DEFINE_HOOK(65B843, RadSiteClass_Update_LevelDelay, 6)
 	auto delay = pRadExt->Type->GetLevelDelay();
 
 	R->ECX(delay);
-	return R->Origin() + 6;
+	return 0x65B849;
 }
-//65B8B9 * is LightDelay
+
 DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 {
 	GET(RadSiteClass * const, Rad, ESI);
@@ -303,7 +301,9 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 		auto delay = pRadExt->Type->GetLightDelay();
 
 	R->ECX(delay);
-	return R->Origin() + 6; //should use return 0x instead ?
+	// return R->Origin() + 6; //should use return 0x instead ?
+	// yes, if you don't want extra instructions at runtime
+	return 0x65B8BF;
 }
 
 // Additional Hook below 
@@ -320,5 +320,3 @@ DEFINE_HOOK(65BB67, RadSite_Deactivate, 6)
 	__asm idiv esi;
 	return 0x65BB6D;
 }
-
-
