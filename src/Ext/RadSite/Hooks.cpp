@@ -301,8 +301,6 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 		auto delay = pRadExt->Type->GetLightDelay();
 
 	R->ECX(delay);
-	// return R->Origin() + 6; //should use return 0x instead ?
-	// yes, if you don't want extra instructions at runtime
 	return 0x65B8BF;
 }
 
