@@ -283,7 +283,7 @@ DEFINE_HOOK(65B6F2, RadSiteClass_Activate_5, 6)
 	double tintFactor = pRadExt->Type->GetTintFactor();
 
 	__asm fmul tintFactor;
-	return R->Origin + 6;
+	return R->Origin() + 6;
 }
 
 DEFINE_HOOK_AGAIN(65B843, RadSiteClass_Update_LevelDelay, 6)
@@ -295,7 +295,7 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LevelDelay, 6)
 	auto delay = pRadExt->Type->GetLevelDelay();
 
 	R->ECX(delay);
-	return R->Origin + 6;
+	return R->Origin() + 6;
 }
 
 // Additional Hook below 
