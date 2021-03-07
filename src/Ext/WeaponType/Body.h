@@ -21,7 +21,7 @@ public:
 
 		Valueable<double> DiskLaser_Radius;
 		Valueable<int> DiskLaser_Circumference;
-		Nullable<int> RadTypeIndex;
+		Valueable<int> RadTypeIndex;
 		ExtData(WeaponTypeClass* OwnerObject) : Extension<WeaponTypeClass>(OwnerObject),
 			DiskLaser_Radius(38.2),
 			DiskLaser_Circumference(240),

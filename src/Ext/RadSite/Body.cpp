@@ -62,13 +62,9 @@ void RadSiteExt::SetRadLevel(RadSiteClass* pRad, RadType* Type , int amount) {
 	//pRadSite->SetRadLevel(amount);
 	pRad->RadDuration = mult * amount;
 	pRad->RadTimeLeft = mult * amount;
-
-
 }
 
-
 //helper function provided by AlexB
-
 double RadSiteExt::GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell) {
 	auto const base = MapClass::Instance->GetCellAt(pThis->BaseCell)->GetCoords();
 	auto const coords = MapClass::Instance->GetCellAt(cell)->GetCoords();
@@ -136,7 +132,6 @@ DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 	return 0;
 }
 */
-
 
 DEFINE_HOOK(65B2F4, RadSiteClass_DTOR, 5) {
 	GET(RadSiteClass *, pThis, ECX);
