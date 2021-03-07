@@ -18,12 +18,12 @@
 					  Radiate , Uncommented
 			 me(Otamaa) adding some more stuffs and rewriting hook that cause crash
 
-	TODO : -Enumerable Save/Load
+	TODO : -Enumerable Save/Load (if needed)
 			-Cell markings
 			-Testings
 
 
-	// some Ares Hook that need to be disabled to use this
+	// Do this Ares Hook will cause a problem ?
 	//4DA584 = FootClass_Update_RadImmune, 7
 */
 
@@ -171,8 +171,6 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5) {
 
 // be aware that this function is updated every frame 
 // putting debug log here can become mess because it gonna print bunch of debug line
-// need to disable this from ares : 
-// 4DA584 = FootClass_Update_RadImmune, 7
 DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 {
 	GET(FootClass * const, pThis, ESI);
@@ -286,8 +284,7 @@ DEFINE_HOOK(65B6F2, RadSiteClass_Activate_5, 6)
 	return R->Origin() + 6;
 }
 
-DEFINE_HOOK_AGAIN(65B843, RadSiteClass_Update_LevelDelay, 6)
-DEFINE_HOOK(65B8B9, RadSiteClass_Update_LevelDelay, 6)
+DEFINE_HOOK(65B843, RadSiteClass_Update_LevelDelay, 6)
 {
 	GET(RadSiteClass * const, Rad, ESI);
 
@@ -296,6 +293,17 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LevelDelay, 6)
 
 	R->ECX(delay);
 	return R->Origin() + 6;
+}
+//65B8B9 * is LightDelay
+DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
+{
+	GET(RadSiteClass * const, Rad, ESI);
+
+	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
+		auto delay = pRadExt->Type->GetLightDelay();
+
+	R->ECX(delay);
+	return R->Origin() + 6; //should use return 0x instead ?
 }
 
 // Additional Hook below 
@@ -313,28 +321,4 @@ DEFINE_HOOK(65BB67, RadSite_Deactivate, 6)
 	return 0x65BB6D;
 }
 
-/*Cant find the Rad Ext
-//commented out ,Rewrited on RadsiteExt
-//65B4F7
-DEFINE_HOOK(65B4FC,RadSite_SetRadLevel , 6) {
-	GET(RadSiteClass*, pRad, ECX);
-	auto pRadExt = RadSiteExt::ExtMap.Find(pRad);
 
-	auto delay = pRadExt->Type->GetDurationMultiple();
-
-	R->EAX(delay);
-	return 0x65B502;
-}
-
-//65B55F
-DEFINE_HOOK(65B55F, RadSite_Add, 6) {
-
-	GET(RadSiteClass*, pRad, ECX);
-	auto pRadExt = RadSiteExt::ExtMap.Find(pRad);
-
-	auto delay = pRadExt->Type->GetDurationMultiple();
-
-	R->EAX(delay);
-
-	return 0x65B565;
-}*/
