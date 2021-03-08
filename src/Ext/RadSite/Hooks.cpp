@@ -26,15 +26,15 @@
 	//4DA584 = FootClass_Update_RadImmune, 7
 */
 
-//From Ares,Ext/Rules/hook.cpp
-DEFINE_HOOK(679A15, RulesData_LoadBeforeTypeData, 6)
-{
-	GET_STACK(CCINIClass*, pINI, 0x4);
-	RadType::AddDefaults(); //try initilize default items
-	RadType::LoadListSection(pINI); //load the custom items
-
-	return 0;
-}
+////From Ares,Ext/Rules/hook.cpp
+//DEFINE_HOOK(679A15, RulesData_LoadBeforeTypeData, 6)
+//{
+//	GET_STACK(CCINIClass*, pINI, 0x4);
+//	RadType::AddDefaults(); //try initilize default items
+//	RadType::LoadListSection(pINI); //load the custom items
+//
+//	return 0;
+//}
 
 DEFINE_HOOK(469150, B_Detonate_ApplyRad, 5)
 {
@@ -64,41 +64,39 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 	auto const& Instances = RadSiteExt::RadSiteInstance;
 	auto const pWeapon = pThis->GetWeaponType();
 	auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon);
-
-	auto pRadType = RadType::Array[0].get();
+	auto const pRadType = &pWeaponExt->RadType;
 
 	// adding owner to RadSite ?
 	// not tested working as intended or not 
 	// but , why not ?
-	auto const pThisHouse = pThis->Owner ? pThis->Owner->Owner : nullptr;
+	//auto const pThisHouse = pThis->Owner ? pThis->Owner->Owner : nullptr;
 
 	if (Instances.Count > 0) {
 		auto const it = std::find_if(Instances.begin(), Instances.end(),
 			[=](RadSiteExt::ExtData* const pSite) // Lambda
 			{
-				return pSite->TypeIndex == unsigned(pWeaponExt->RadTypeIndex) &&
+				return pSite->Type == pRadType &&
 					pSite->OwnerObject()->BaseCell == location &&
-					pSite->Owner == pThisHouse &&
+					//pSite->Owner == pThisHouse &&
 					spread == pSite->OwnerObject()->Spread;
 			});
 		if (it == Instances.end()) {
 
-			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, pThisHouse);
+			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, nullptr);
 		}
 		else {
-			pRadType = RadType::Array[(*it)->TypeIndex].get();
-			auto pRadSite = (*it)->OwnerObject();
-			if (pRadSite->GetRadLevel() + amount > pRadType->GetLevelMax()) {
-				amount = pRadType->GetLevelMax() - pRadSite->GetRadLevel();
+			auto pRadExt = *it;
+			auto pRadSite = pRadExt->OwnerObject();
+			if (pRadSite->GetRadLevel() + amount > pRadType->LevelMax) {
+				amount = pRadType->LevelMax - pRadSite->GetRadLevel();
 			}
-			int lvmax = pRadType->GetDurationMultiple();
+			int lvmax = pRadType->DurationMultiple;
 			// Handle It 
 			RadSiteExt::RadSiteAdd(pRadSite, lvmax, amount);
-
 		}
 	}
 	else {
-		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, pThisHouse);
+		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, nullptr);
 	}
 
 	return 0x46AE5E;
@@ -107,15 +105,20 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 // Too OP , be aware
 DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 {
-	GET(BuildingClass * const, pThis, ECX);
+	GET(BuildingClass * const, pBuilding, ECX);
 
-	auto const MainCoords = pThis->GetMapCoords();
+	if (pBuilding->IsIronCurtained() || pBuilding->Type->ImmuneToRadiation || pBuilding->InLimbo) {
+		return 0;
+	}
 
-	for (auto pFoundation = pThis->GetFoundationData(false); *pFoundation != CellStruct{ 0x7FFF, 0x7FFF }; ++pFoundation) {
+	auto const MainCoords = pBuilding->GetMapCoords();
+
+	for (auto pFoundation = pBuilding->GetFoundationData(false); *pFoundation != CellStruct{ 0x7FFF, 0x7FFF }; ++pFoundation) {
 		CellStruct CurrentCoord = MainCoords + *pFoundation;
 
 		for (auto pRadExt : RadSiteExt::RadSiteInstance) {
 			RadSiteClass* pRadSite = pRadExt->OwnerObject();
+			RadType* pType = pRadExt->Type;
 
 			// Check the distance , if not in range , just skip this one
 			auto OrDistance = pRadSite->BaseCell.DistanceFrom(CurrentCoord);
@@ -123,44 +126,31 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 				continue;
 			}
 
-			auto const pType = pRadExt->Type;
-			auto RadApplicationDelay = pType->GetBuildingApplicationDelay();
-
-			if (Unsorted::CurrentFrame % RadApplicationDelay != 0) {
-				continue;
-			}
-
-			if (pThis->IsIronCurtained() || pThis->Type->ImmuneToRadiation || pThis->InLimbo) {
+			if (Unsorted::CurrentFrame % pType->BuildingApplicationDelay != 0) {
 				continue;
 			}
 
 			auto const RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, CurrentCoord); // for more precise dmg calculation
 
-			if (RadLevel <= 0) {
-				continue;
-			}
-
-			auto const pWarhead = pType->GetWarhead();
-			if (!pWarhead) {
+			if (RadLevel <= 0 || !pType->RadWarhead) {
 				continue;
 			}
 
 			bool absolute = false; // will prevent passanger escapes
 			bool ignore = false; // will ignore verses
 
-			if (pWarhead->WallAbsoluteDestroyer) {
+			if (pType->RadWarhead->WallAbsoluteDestroyer) {
 				absolute = true;
-				ignore = pThis->Type->Wall;
+				ignore = pBuilding->Type->Wall;
 			}
 
-			double RadLevelFactor = pType->GetLevelFactor();
-			int Damage = static_cast<int>((RadLevel / 2) * RadLevelFactor);
+			int Damage = static_cast<int>((RadLevel / 2) * pType->LevelFactor);
 			const int Distance = static_cast<int>(OrDistance);
 
 			// Prevent crash when bullet has no House Owner
 			auto const pThisHouse = pRadExt->Owner ? pRadExt->Owner : HouseClass::FindCivilianSide();
 
-			pThis->ReceiveDamage(&Damage, Distance, pWarhead, nullptr, ignore, absolute, pThisHouse);
+			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, ignore, absolute, pThisHouse);
 
 		}
 	}
@@ -171,51 +161,48 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 // putting debug log here can become mess because it gonna print bunch of debug line
 DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 {
-	GET(FootClass * const, pThis, ESI);
-	auto pCell = pThis->GetCell();
+	GET(FootClass * const, pFoot, ESI);
+	auto pCell = pFoot->GetCell();
 
-	// Loop for each different radiation stored in the RadSites container
-	for (auto const pRadExt : RadSiteExt::RadSiteInstance) {
+	if (!pFoot->IsIronCurtained() && !pFoot->GetTechnoType()->ImmuneToRadiation && !pFoot->InLimbo && !pFoot->IsInAir()) {
+		// Loop for each different radiation stored in the RadSites container
+		for (auto const pRadExt : RadSiteExt::RadSiteInstance) {
 
-		auto pRadSite = pRadExt->OwnerObject();
-		auto OrDistance = pRadSite->BaseCell.DistanceFrom(pCell->MapCoords);
+			auto pRadSite = pRadExt->OwnerObject();
+			auto OrDistance = pRadSite->BaseCell.DistanceFrom(pCell->MapCoords);
 
-		// Check the distance , if not in range , just skip this one
-		if (pRadSite->Spread < OrDistance - 0.7) {
-			continue;
+			// Check the distance, if not in range, just skip this one
+			if (pRadSite->Spread < OrDistance - 0.7) {
+				continue;
+			}
+
+			auto const pType = pRadExt->Type;
+			auto RadApplicationDelay = pType->ApplicationDelay;
+			if (Unsorted::CurrentFrame % RadApplicationDelay != 0) {
+				continue;
+			}
+
+			// for more precise dmg calculation
+			// auto const RadLevel = pRadSite->GetRadLevel();
+			auto const RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, pCell->MapCoords);
+			if (RadLevel <= 0) {
+				continue;
+			}
+
+			auto Damage = static_cast<int>(RadLevel * pType->LevelFactor);
+			auto Distance = static_cast<int>(OrDistance);
+
+			if (!pType->RadWarhead) {
+				continue;
+			}
+
+			// Prevent crash when bullet has no House Owner
+			auto const pThisHouse = pRadExt->Owner ? pRadExt->Owner : HouseClass::FindCivilianSide();
+			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, true, pThisHouse);
 		}
-
-		auto const pType = pRadExt->Type;
-		auto RadApplicationDelay = pType->GetApplicationDelay();
-		if (Unsorted::CurrentFrame % RadApplicationDelay != 0) {
-			continue;
-		}
-
-		if (pThis->IsIronCurtained() || pThis->GetTechnoType()->ImmuneToRadiation || pThis->InLimbo || pThis->IsInAir()) {
-			continue;
-		}
-
-		// for more precise dmg calculation
-		// auto const RadLevel = pRadSite->GetRadLevel();
-		auto const RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, pCell->MapCoords);
-		if (RadLevel <= 0) {
-			continue;
-		}
-
-		double RadLevelFactor = pType->GetLevelFactor();
-		auto Damage = static_cast<int>(RadLevel * RadLevelFactor);
-		auto Distance = static_cast<int>(OrDistance);
-
-		auto pWarhead = pType->GetWarhead();
-		if (!pWarhead) {
-			continue;
-		}
-
-		// Prevent crash when bullet has no House Owner
-		auto const pThisHouse = pRadExt->Owner ? pRadExt->Owner : HouseClass::FindCivilianSide();
-		pThis->ReceiveDamage(&Damage, Distance, pWarhead, nullptr, false, true, pThisHouse);
 	}
-	return pThis->IsAlive ? 0x4DA63Bu : 0x4DAF00;
+
+	return pFoot->IsAlive ? 0x4DA63Bu : 0x4DAF00;
 }
 
 DEFINE_HOOK(65B593, RadSiteClass_Activate_Delay, 6)
@@ -224,8 +211,8 @@ DEFINE_HOOK(65B593, RadSiteClass_Activate_Delay, 6)
 	auto const pExt = RadSiteExt::ExtMap.Find(pThis);
 
 	auto const CurrentLevel = pThis->GetRadLevel();
-	auto LevelDelay = pExt->Type->GetLevelDelay();
-	auto LightDelay = pExt->Type->GetLightDelay();
+	auto LevelDelay = pExt->Type->LevelDelay;
+	auto LightDelay = pExt->Type->LightDelay;
 
 	if (CurrentLevel < LevelDelay) {
 		LevelDelay = CurrentLevel;
@@ -242,7 +229,7 @@ DEFINE_HOOK(65B5CE, RadSiteClass_Activate_Color, 6)
 	GET(RadSiteClass * const, pThis, ESI);
 
 	auto pExt = RadSiteExt::ExtMap.Find(pThis);
-	ColorStruct pRadColor = pExt->Type->GetColor();
+	ColorStruct pRadColor = pExt->Type->RadSiteColor;
 
 	R->EAX(0);
 	R->EDX(0);
@@ -264,7 +251,7 @@ DEFINE_HOOK(65B63E, RadSiteClass_Activate_LightFactor, 6)
 {
 	GET(RadSiteClass * const, Rad, ESI);
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
-	auto lightFactor = pRadExt->Type->GetLightFactor();
+	auto lightFactor = pRadExt->Type->LightFactor;
 
 	__asm fmul lightFactor;
 	return 0x65B644;
@@ -276,7 +263,7 @@ DEFINE_HOOK(65B6F2, RadSiteClass_Activate_TintFactor, 6)
 {
 	GET(RadSiteClass * const, Rad, ESI);
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
-	double tintFactor = pRadExt->Type->GetTintFactor();
+	double tintFactor = pRadExt->Type->TintFactor;
 
 	__asm fmul tintFactor;
 	return R->Origin() + 6;
@@ -287,7 +274,7 @@ DEFINE_HOOK(65B843, RadSiteClass_Update_LevelDelay, 6)
 	GET(RadSiteClass * const, Rad, ESI);
 
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
-	auto delay = pRadExt->Type->GetLevelDelay();
+	auto delay = pRadExt->Type->LevelDelay;
 
 	R->ECX(delay);
 	return 0x65B849;
@@ -298,7 +285,7 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 	GET(RadSiteClass * const, Rad, ESI);
 
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
-		auto delay = pRadExt->Type->GetLightDelay();
+		auto delay = pRadExt->Type->LightDelay;
 
 	R->ECX(delay);
 	return 0x65B8BF;
@@ -312,7 +299,7 @@ DEFINE_HOOK(65BB67, RadSite_Deactivate, 6)
 
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
 
-	auto delay = pRadExt->Type->GetLevelDelay();
+	auto delay = pRadExt->Type->LevelDelay;
 	R->ESI(delay);
 	__asm xor edx, edx; // fixing integer overflow crash
 	__asm idiv esi;

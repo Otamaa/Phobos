@@ -17,15 +17,12 @@ public:
 	class ExtData final : public Extension<RadSiteClass> 
 	{
 	public:
-		Valueable<RadType*> Type;
-		Nullable<unsigned> TypeIndex;
-		Nullable<HouseClass*> Owner;
+		WeaponTypeClass* Weapon;
+		Valueable <HouseClass*> Owner;
+		RadType* Type;
 
-		ExtData(RadSiteClass* OwnerObject) : Extension<RadSiteClass>(OwnerObject),
-			Type(nullptr),
-			TypeIndex(0),
-			Owner(nullptr)
-			{ };
+		ExtData(RadSiteClass* OwnerObject) : Extension<RadSiteClass>(OwnerObject)//,
+		{ };
 
 		virtual ~ExtData() { }
 
