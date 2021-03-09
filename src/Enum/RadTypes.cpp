@@ -22,7 +22,7 @@ void RadType::LoadDefault() {
 		this->LightFactor.Read(exINI, section, "RadLightFactor");
 		this->TintFactor.Read(exINI, section, "RadTintFactor");
 
-		RadType::DebugLog("Read Default entry", "");
+		RadType::DebugLog("Read Default entry");
 
 
 }
