@@ -35,7 +35,7 @@ public:
 	};
 	static DynamicVectorClass<RadSiteExt::ExtData*> RadSiteInstance;
 
-	static void CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt , HouseClass* pOwner);
+	static void CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt);
 	static void RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount);
 	static void SetRadLevel(RadSiteClass* pRad, RadType* Type, int amount);
 	static double GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell);
