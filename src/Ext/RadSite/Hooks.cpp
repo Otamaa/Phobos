@@ -66,10 +66,6 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 	auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon);
 	auto const pRadType = &pWeaponExt->RadType;
 
-	// adding owner to RadSite ?
-	// not tested working as intended or not 
-	// but , why not ?
-	//auto const pThisHouse = pThis->Owner ? pThis->Owner->Owner : nullptr;
 
 	if (Instances.Count > 0) {
 		auto const it = std::find_if(Instances.begin(), Instances.end(),
@@ -82,7 +78,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 			});
 		if (it == Instances.end()) {
 
-			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, nullptr);
+			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt);
 		}
 		else {
 			auto pRadExt = *it;
@@ -96,7 +92,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 		}
 	}
 	else {
-		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt, nullptr);
+		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt);
 	}
 
 	return 0x46AE5E;
@@ -147,10 +143,8 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 			int Damage = static_cast<int>((RadLevel / 2) * pType->LevelFactor);
 			const int Distance = static_cast<int>(OrDistance);
 
-			// Prevent crash when bullet has no House Owner
-			auto const pThisHouse = pRadExt->Owner ? pRadExt->Owner : HouseClass::FindCivilianSide();
 
-			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, ignore, absolute, pThisHouse);
+			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, ignore, absolute, nullptr);
 
 		}
 	}
@@ -196,9 +190,9 @@ DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 				continue;
 			}
 
-			// Prevent crash when bullet has no House Owner
-			auto const pThisHouse = pRadExt->Owner ? pRadExt->Owner : HouseClass::FindCivilianSide();
-			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, true, pThisHouse);
+			
+			
+			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, true, nullptr);
 		}
 	}
 
@@ -292,7 +286,6 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 }
 
 // Additional Hook below 
-// some working , some cant fint the EXT cause crash
 DEFINE_HOOK(65BB67, RadSite_Deactivate, 6)
 {
 	GET(const RadSiteClass*, Rad, ECX);
