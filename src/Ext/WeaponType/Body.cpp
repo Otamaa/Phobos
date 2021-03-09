@@ -20,7 +20,7 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 		this->DiskLaser_Radius.Read(exINI, pSection, "DiskLaser.Radius");
 		this->DiskLaser_Circumference = (int)(this->DiskLaser_Radius * Math::Pi * 2);
 	}
-
+if (this->OwnerObject()->RadLevel > 0) { //so it wont get parsed everytime for non RadLevel weapon
 	this->RadType.Read(pINI, pSection, "RadType");
 }
 
