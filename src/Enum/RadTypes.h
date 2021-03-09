@@ -12,7 +12,8 @@ public:
 	void RadType::Load(IStream* Stm);
 	void RadType::Save(IStream* Stm);
 	void RadType::DebugLog(const char* str);
-
+	void RadType::LoadDefault();
+	
 	PhobosFixedString<0x20> ID;
 	Valueable<int> DurationMultiple;
 	Valueable<int> ApplicationDelay;
