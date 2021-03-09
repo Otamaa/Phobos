@@ -16,7 +16,7 @@ DynamicVectorClass<RadSiteExt::ExtData*> RadSiteExt::RadSiteInstance;
 				-Rewriting some stuffs 
 
 */
-void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt ,HouseClass* pOwner) {
+void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt) {
 	//auto const pCell = MapClass::Instance->TryGetCellAt(location);
 	auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
 
@@ -26,7 +26,6 @@ void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, Wea
 	pRadExt->Weapon = pWeaponExt->OwnerObject();
 	pRadExt->Type = &pWeaponExt->RadType;
 	pRadExt->Type->DebugLog("CreateInstance");
-	//pRadExt->Owner = pOwner;
 	pRadSite->SetBaseCell(&location);
 	pRadSite->SetSpread(spread);
 
@@ -52,13 +51,13 @@ void RadSiteExt::RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount) {
 	pRad->Activate();
 }
 
+
+//write handler myself -Otamaa
+//pRadSite->SetRadLevel(amount);
 void RadSiteExt::SetRadLevel(RadSiteClass* pRad, RadType* Type , int amount) {
 	
 	int mult = Type->DurationMultiple;
 
-//Commented out because the hook keep crashing 
-//write handler myself -Otamaa
-	//pRadSite->SetRadLevel(amount);
 	pRad->RadDuration = mult * amount;
 	pRad->RadTimeLeft = mult * amount;
 }
@@ -127,7 +126,7 @@ DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 		auto pRadExt = RadSiteExt::ExtMap.FindOrAllocate(pThis);
 		RadSiteExt::RadSiteInstance.AddItem(pRadExt);
 
-		auto pWeaponType = pBullet->WeaponType;
+		auto const pWeaponType = pBullet->WeaponType;
 
 		auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeaponType);
 
