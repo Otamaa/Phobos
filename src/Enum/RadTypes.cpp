@@ -3,6 +3,29 @@
 // for Debug::Log
 #include <WarheadTypeClass.h>
 
+void RadType::LoadDefault() {
+	INI_EX exINI(CCINIClass::INI_Rules);
+
+	
+		this->ID = "Radiation";
+		const char* section = this->ID;
+
+		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
+		this->RadSiteColor.Read(exINI, section, "RadColor");
+		this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
+		this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");
+		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
+		this->LevelMax.Read(exINI, section, "RadLevelMax");
+		this->LevelDelay.Read(exINI, section, "RadLevelDelay");
+		this->LightDelay.Read(exINI, section, "RadLightDelay");
+		this->LevelFactor.Read(exINI, section, "RadLevelFactor");
+		this->LightFactor.Read(exINI, section, "RadLightFactor");
+		this->TintFactor.Read(exINI, section, "RadTintFactor");
+
+		RadType::DebugLog("Read Default entry", "");
+
+
+}
 void RadType::Read(CCINIClass* const pINI, const char* pSection, const char* pKey)
 {
 	INI_EX exINI(pINI);
@@ -24,7 +47,11 @@ void RadType::Read(CCINIClass* const pINI, const char* pSection, const char* pKe
 		this->TintFactor.Read(exINI, section, "RadTintFactor");
 
 		RadType::DebugLog("Read");
+	} else 
+	{  //iknow this not ideal way but , this fixed that save game issue that you send on discord -Otamaa
+		RadType::LoadDefault();
 	}
+		
 }
 
 void RadType::Load(IStream* Stm) {
