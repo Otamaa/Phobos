@@ -26,16 +26,6 @@
 	//4DA584 = FootClass_Update_RadImmune, 7
 */
 
-////From Ares,Ext/Rules/hook.cpp
-//DEFINE_HOOK(679A15, RulesData_LoadBeforeTypeData, 6)
-//{
-//	GET_STACK(CCINIClass*, pINI, 0x4);
-//	RadType::AddDefaults(); //try initilize default items
-//	RadType::LoadListSection(pINI); //load the custom items
-//
-//	return 0;
-//}
-
 DEFINE_HOOK(469150, B_Detonate_ApplyRad, 5)
 {
 	GET(BulletClass * const, pThis, ESI);
@@ -98,7 +88,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 	return 0x46AE5E;
 }
 
-// Too OP , be aware
+// Too OP, be aware
 DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 {
 	GET(BuildingClass * const, pBuilding, ECX);
@@ -114,37 +104,32 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 
 		for (auto pRadExt : RadSiteExt::RadSiteInstance) {
 			RadSiteClass* pRadSite = pRadExt->OwnerObject();
+
+			// Check the distance, if not in range, just skip this one
+			double orDistance = pRadSite->BaseCell.DistanceFrom(CurrentCoord);
+			if (pRadSite->Spread < orDistance - 0.5)
+				continue;
+
 			RadType* pType = pRadExt->Type;
-
-			// Check the distance , if not in range , just skip this one
-			auto OrDistance = pRadSite->BaseCell.DistanceFrom(CurrentCoord);
-			if (pRadSite->Spread < OrDistance - 0.5) {
+			int RadApplicationDelay = pType->BuildingApplicationDelay;
+			if (Unsorted::CurrentFrame % RadApplicationDelay != 0)
 				continue;
-			}
 
-			if (Unsorted::CurrentFrame % pType->BuildingApplicationDelay != 0) {
+			// for more precise dmg calculation
+			double RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, CurrentCoord);
+			if (RadLevel <= 0 || !pType->RadWarhead)
 				continue;
-			}
 
-			auto const RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, CurrentCoord); // for more precise dmg calculation
+			// will prevent passanger escapes
+			bool absolute = pType->RadWarhead->WallAbsoluteDestroyer;
 
-			if (RadLevel <= 0 || !pType->RadWarhead) {
-				continue;
-			}
+			// will ignore verses
+			bool ignore = pBuilding->Type->Wall && absolute;
 
-			bool absolute = false; // will prevent passanger escapes
-			bool ignore = false; // will ignore verses
+			int damage = static_cast<int>((RadLevel / 2) * pType->LevelFactor);
+			int distance = static_cast<int>(orDistance);
 
-			if (pType->RadWarhead->WallAbsoluteDestroyer) {
-				absolute = true;
-				ignore = pBuilding->Type->Wall;
-			}
-
-			int Damage = static_cast<int>((RadLevel / 2) * pType->LevelFactor);
-			const int Distance = static_cast<int>(OrDistance);
-
-
-			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, ignore, absolute, nullptr);
+			pBuilding->ReceiveDamage(&damage, distance, pType->RadWarhead, nullptr, ignore, absolute, nullptr);
 
 		}
 	}
@@ -156,42 +141,34 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 {
 	GET(FootClass * const, pFoot, ESI);
-	auto pCell = pFoot->GetCell();
 
 	if (!pFoot->IsIronCurtained() && !pFoot->GetTechnoType()->ImmuneToRadiation && !pFoot->InLimbo && !pFoot->IsInAir()) {
+
+		CellStruct CurrentCoord = pFoot->GetCell()->MapCoords;
+
 		// Loop for each different radiation stored in the RadSites container
 		for (auto const pRadExt : RadSiteExt::RadSiteInstance) {
 
-			auto pRadSite = pRadExt->OwnerObject();
-			auto OrDistance = pRadSite->BaseCell.DistanceFrom(pCell->MapCoords);
-
+			RadSiteClass* pRadSite = pRadExt->OwnerObject();
+			
 			// Check the distance, if not in range, just skip this one
-			if (pRadSite->Spread < OrDistance - 0.7) {
+			double orDistance = pRadSite->BaseCell.DistanceFrom(CurrentCoord);
+			if (pRadSite->Spread < orDistance - 0.7)
 				continue;
-			}
 
-			auto const pType = pRadExt->Type;
-			auto RadApplicationDelay = pType->ApplicationDelay;
-			if (Unsorted::CurrentFrame % RadApplicationDelay != 0) {
+			RadType* pType = pRadExt->Type;
+			int RadApplicationDelay = pType->ApplicationDelay;
+			if (Unsorted::CurrentFrame % RadApplicationDelay != 0)
 				continue;
-			}
 
 			// for more precise dmg calculation
-			// auto const RadLevel = pRadSite->GetRadLevel();
-			auto const RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, pCell->MapCoords);
-			if (RadLevel <= 0) {
+			double RadLevel = RadSiteExt::GetRadLevelAt(pRadSite, CurrentCoord);
+			if (RadLevel <= 0 || !pType->RadWarhead)
 				continue;
-			}
 
-			auto Damage = static_cast<int>(RadLevel * pType->LevelFactor);
-			auto Distance = static_cast<int>(OrDistance);
+			int Damage = static_cast<int>(RadLevel * pType->LevelFactor);
+			int Distance = static_cast<int>(orDistance);
 
-			if (!pType->RadWarhead) {
-				continue;
-			}
-
-			
-			
 			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, true, nullptr);
 		}
 	}
@@ -279,7 +256,7 @@ DEFINE_HOOK(65B8B9, RadSiteClass_Update_LightDelay, 6)
 	GET(RadSiteClass * const, Rad, ESI);
 
 	auto pRadExt = RadSiteExt::ExtMap.Find(Rad);
-		auto delay = pRadExt->Type->LightDelay;
+	auto delay = pRadExt->Type->LightDelay;
 
 	R->ECX(delay);
 	return 0x65B8BF;
