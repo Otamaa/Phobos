@@ -112,7 +112,7 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 
 			RadType* pType = pRadExt->Type;
 			int RadApplicationDelay = pType->BuildingApplicationDelay;
-			if (Unsorted::CurrentFrame % RadApplicationDelay != 0)
+			if ((RadApplicationDelay != 0) && (Unsorted::CurrentFrame % RadApplicationDelay != 0))
 				continue;
 
 			// for more precise dmg calculation
@@ -158,7 +158,7 @@ DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 
 			RadType* pType = pRadExt->Type;
 			int RadApplicationDelay = pType->ApplicationDelay;
-			if (Unsorted::CurrentFrame % RadApplicationDelay != 0)
+			if ((RadApplicationDelay != 0) && (Unsorted::CurrentFrame % RadApplicationDelay != 0))
 				continue;
 
 			// for more precise dmg calculation
