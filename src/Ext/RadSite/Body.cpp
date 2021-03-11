@@ -1,5 +1,6 @@
 #include "Body.h"
 #include <WeaponTypeClass.h>
+#include <BulletClass.h>
 
 #include "../WeaponType/Body.h"
 #include "../../Enum/RadTypes.h"
@@ -34,8 +35,8 @@ void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, Wea
 
 	pRadSite->Activate();
 
-	if (Instances.FindItemIndex(pRadExt) == -1) {
-		Instances.AddItem(pRadExt);
+	if (RadSiteInstance.FindItemIndex(pRadExt) == -1) {
+		RadSiteInstance.AddItem(pRadExt);
 	}
 }
 
@@ -54,7 +55,7 @@ void RadSiteExt::RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount) {
 
 void RadSiteExt::SetRadLevel(RadSiteClass* pRad, RadType* Type , int amount) {
 	
-	int mult = Type->GetDurationMultiple();
+	int mult = Type->DurationMultiple;
         pRad->RadLevel = amount;
 	pRad->RadDuration = mult * amount;
 	pRad->RadTimeLeft = mult * amount;
