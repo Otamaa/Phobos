@@ -18,7 +18,6 @@
 			 me(Otamaa) adding some more stuffs and rewriting hook that cause crash
 
 	TODO : -Enumerable Save/Load (if needed)
-			-Cell markings
 			-Testings
 
 
@@ -53,17 +52,15 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 
 	auto const& Instances = RadSiteExt::RadSiteInstance;
 	auto const pWeapon = pThis->GetWeaponType();
-	auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon);
+	auto const pWeaponExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeapon);
 	auto const pRadType = &pWeaponExt->RadType;
-
 
 	if (Instances.Count > 0) {
 		auto const it = std::find_if(Instances.begin(), Instances.end(),
 			[=](RadSiteExt::ExtData* const pSite) // Lambda
-			{
+			{// find 
 				return pSite->Type == pRadType &&
 					pSite->OwnerObject()->BaseCell == location &&
-					//pSite->Owner == pThisHouse &&
 					spread == pSite->OwnerObject()->Spread;
 			});
 		if (it == Instances.end()) {

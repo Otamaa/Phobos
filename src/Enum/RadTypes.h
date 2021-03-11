@@ -4,6 +4,7 @@
 
 #include <RulesClass.h>
 #include <CCINIClass.h>
+#include <WarheadTypeClass.h>
 
 class RadType
 {
@@ -12,34 +13,34 @@ public:
 	void RadType::Load(IStream* Stm);
 	void RadType::Save(IStream* Stm);
 	void RadType::DebugLog(const char* str);
-	void RadType::LoadDefault();
 	
 	PhobosFixedString<0x20> ID;
 	Valueable<int> DurationMultiple;
 	Valueable<int> ApplicationDelay;
-	Valueable<double> LevelFactor;
 	Valueable<int> LevelMax;
 	Valueable<int> LevelDelay;
 	Valueable<int> LightDelay;
 	Valueable<int> BuildingApplicationDelay;
-	Valueable<WarheadTypeClass*> RadWarhead;
-	Valueable<ColorStruct> RadSiteColor;
+	Valueable<double> LevelFactor;
 	Valueable<double> LightFactor;
 	Valueable<double> TintFactor;
+	Valueable<ColorStruct> RadSiteColor;
+	Valueable<WarheadTypeClass*> RadWarhead;
 
-	RadType() :
-		DurationMultiple(0),
-		ApplicationDelay(0),
-		LevelFactor(0),
-		LevelMax(0),
-		LevelDelay(0),
-		LightDelay(0),
-		BuildingApplicationDelay(false),
-		RadWarhead(nullptr),
-		RadSiteColor(),
-		LightFactor(0),
-		TintFactor(0)
+	RadType() : 
+		ID("Radiation"),
+		DurationMultiple(1),
+		ApplicationDelay(16),
+		LevelMax(500),
+		LevelDelay(90),
+		LightDelay(90),
+		BuildingApplicationDelay(0),
+		LevelFactor(0.2f),
+		LightFactor(0.1f),
+		TintFactor(1.0f),
+		RadSiteColor(ColorStruct{0,255,0}),
+		RadWarhead(nullptr)
 	{
-		ID = "";
+		RadWarhead = WarheadTypeClass::FindOrAllocate("RadSite");
 	}
 };

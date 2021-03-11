@@ -1,57 +1,31 @@
 #include "RadTypes.h"
 
-// for Debug::Log
-#include <WarheadTypeClass.h>
-
-void RadType::LoadDefault() {
-	INI_EX exINI(CCINIClass::INI_Rules);
-
-	
-		this->ID = "Radiation";
-		const char* section = this->ID;
-
-		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
-		this->RadSiteColor.Read(exINI, section, "RadColor");
-		this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
-		this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");
-		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
-		this->LevelMax.Read(exINI, section, "RadLevelMax");
-		this->LevelDelay.Read(exINI, section, "RadLevelDelay");
-		this->LightDelay.Read(exINI, section, "RadLightDelay");
-		this->LevelFactor.Read(exINI, section, "RadLevelFactor");
-		this->LightFactor.Read(exINI, section, "RadLightFactor");
-		this->TintFactor.Read(exINI, section, "RadTintFactor");
-
-		RadType::DebugLog("Read Default entry");
-
-
-}
 void RadType::Read(CCINIClass* const pINI, const char* pSection, const char* pKey)
 {
 	INI_EX exINI(pINI);
 
-	if(this->ID.Read(pINI, pSection, "RadType")){
+	if (this->ID.Read(pINI, pSection, "RadType")) {
 
 		const char* section = this->ID;
 
-		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
-		this->RadSiteColor.Read(exINI, section, "RadColor");
+		if (!pINI->GetSection(section)) {
+			return;
+		}
+
 		this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
 		this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");
-		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
+		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelay.Building");
 		this->LevelMax.Read(exINI, section, "RadLevelMax");
 		this->LevelDelay.Read(exINI, section, "RadLevelDelay");
 		this->LightDelay.Read(exINI, section, "RadLightDelay");
 		this->LevelFactor.Read(exINI, section, "RadLevelFactor");
 		this->LightFactor.Read(exINI, section, "RadLightFactor");
 		this->TintFactor.Read(exINI, section, "RadTintFactor");
+		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
+		this->RadSiteColor.Read(exINI, section, "RadColor");
 
 		RadType::DebugLog("Read");
-	} else 
-	{  //iknow this not ideal way but , this fixed that save game issue that you send on discord -Otamaa
-		RadType::LoadDefault();
 	}
-		
 }
 
 void RadType::Load(IStream* Stm) {
@@ -67,7 +41,7 @@ void RadType::Load(IStream* Stm) {
 
 		char warheadID[0x18];
 		PhobosStreamReader::Process(Stm, warheadID);
-		RadWarhead = WarheadTypeClass::Find(warheadID);
+		RadWarhead = WarheadTypeClass::FindOrAllocate(warheadID);
 
 		this->RadSiteColor.Load(Stm);
 		this->LightFactor.Load(Stm);
@@ -111,7 +85,7 @@ void RadType::DebugLog(const char* str) {
 	Debug::Log("\tLevelMax = %d\n", LevelMax);
 	Debug::Log("\tLevelDelay = %d\n", LevelDelay);
 	Debug::Log("\tLightDelay = %d\n", LightDelay);
-	Debug::Log("\tBuildingApplicationDelay = %d\n", BuildingApplicationDelay);
+	Debug::Log("\tApplicationDelay.Building = %d\n", BuildingApplicationDelay);
 
 	Debug::Log("\tRadWarhead = %s\n", this->RadWarhead ? this->RadWarhead->ID : NONE_STR);
 	Debug::Log("\tRadSiteColor = %d,%d,%d\n", this->RadSiteColor.Get().R, this->RadSiteColor.Get().G, this->RadSiteColor.Get().B);
