@@ -113,11 +113,12 @@ DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 		RadSiteExt::RadSiteInstance.AddItem(pRadExt);
 
 		auto pWeaponType = pBullet->WeaponType;
-		auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeaponType);
-
-		pRadExt->Weapon = pWeaponType;
-		pRadExt->Type = &pWeaponTypeExt->RadType;
-		pRadExt->Type->DebugLog("RadSiteClass_CTOR");
+		if (pWeaponType) {
+			auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeaponType);
+			pRadExt->Weapon = pWeaponType;
+			pRadExt->Type = &pWeaponTypeExt->RadType;
+			pRadExt->Type->DebugLog("RadSiteClass_CTOR");
+		}
 	}
 	else {
 		Debug::Log("RadSiteClass_CTOR");
