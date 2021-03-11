@@ -1,81 +1,121 @@
 #include "RadTypes.h"
 
-#include "../Utilities/TemplateDef.h"
-
+// for Debug::Log
 #include <WarheadTypeClass.h>
-#include <string.h>
 
-Enumerable<RadType>::container_t Enumerable<RadType>::Array;
-
-const char * Enumerable<RadType>::GetMainSection()
-{
-	return "RadiationTypes";
-}
-
-RadType::RadType(const char* const pTitle)
-	: Enumerable<RadType>(pTitle),
-	Level_Delay(),
-	Light_Delay(),
-	RadSiteColor(),
-	Level_Max(),
-	Level_Factor(),
-	Light_Factor(),
-	Tint_Factor(),
-	RadWarhead(),
-	Duration_Multiple(),
-	Application_Delay(),
-	BuildingApplicationDelay()
-{ }
-
-RadType::~RadType() = default;
-
-void RadType::AddDefaults()
-{
-	FindOrAllocate("Radiation");
-}
-
-void RadType::LoadListSection(CCINIClass *pINI)
-{
-	const char *section = GetMainSection();
-	int len = pINI->GetKeyCount(section);
-	for (int i = 0; i < len; ++i) {
-		const char *key = pINI->GetKeyName(section, i);
-		if (pINI->ReadString(section, key, "", Phobos::readBuffer)) {
-			FindOrAllocate(Phobos::readBuffer);
-		}
-	}
-	for (size_t i = 0; i < Array.size(); ++i) {
-		Array[i]->LoadFromINI(pINI);
-	}
-}
-
-void RadType::LoadFromINI(CCINIClass *pINI)
-{
-	const char *section = this->Name;
-
-	INI_EX exINI(pINI);
-
-	this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
-	this->RadSiteColor.Read(exINI, section, "RadColor");
-	this->Duration_Multiple.Read(exINI, section, "RadDurationMultiple");
-	this->Application_Delay.Read(exINI, section, "RadApplicationDelay");
-	this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
-	this->Level_Max.Read(exINI, section, "RadLevelMax");
-	this->Level_Delay.Read(exINI, section, "RadLevelDelay");
-	this->Light_Delay.Read(exINI, section, "RadLightDelay");
-	this->Level_Factor.Read(exINI, section, "RadLevelFactor");
-	this->Light_Factor.Read(exINI, section, "RadLightFactor");
-	this->Tint_Factor.Read(exINI, section, "RadTintFactor");
+void RadType::LoadDefault() {
+	INI_EX exINI(CCINIClass::INI_Rules);
 
 	
-	Debug::Log("Reading RadType sections , section Name = %s\n", this->Name);
-	Debug::Log("RadType Index = %d\n", RadType::FindIndex(this->Name));
-	Debug::Log("RadWarhead = %s\n", this->RadWarhead->ID);
-	Debug::Log("RadSiteColor = %d,%d,%d\n", this->RadSiteColor.Get().R, this->RadSiteColor.Get().G, this->RadSiteColor.Get().B);
-	Debug::Log("Duration_Multiple = %d\n", this->Duration_Multiple);
-	Debug::Log("Level_Max = %d\n", this->Level_Max);
-	Debug::Log("Level_Delay = %d\n", this->Level_Delay);
-	Debug::Log("Light_Delay = %d\n", this->Light_Delay);
+		this->ID = "Radiation";
+		const char* section = this->ID;
+
+		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
+		this->RadSiteColor.Read(exINI, section, "RadColor");
+		this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
+		this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");
+		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
+		this->LevelMax.Read(exINI, section, "RadLevelMax");
+		this->LevelDelay.Read(exINI, section, "RadLevelDelay");
+		this->LightDelay.Read(exINI, section, "RadLightDelay");
+		this->LevelFactor.Read(exINI, section, "RadLevelFactor");
+		this->LightFactor.Read(exINI, section, "RadLightFactor");
+		this->TintFactor.Read(exINI, section, "RadTintFactor");
+
+		RadType::DebugLog("Read Default entry");
 
 
+}
+void RadType::Read(CCINIClass* const pINI, const char* pSection, const char* pKey)
+{
+	INI_EX exINI(pINI);
+
+	if(this->ID.Read(pINI, pSection, "RadType")){
+
+		const char* section = this->ID;
+
+		this->RadWarhead.Read(exINI, section, "RadSiteWarhead");
+		this->RadSiteColor.Read(exINI, section, "RadColor");
+		this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
+		this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");
+		this->BuildingApplicationDelay.Read(exINI, section, "RadApplicationDelayOnBuilding");
+		this->LevelMax.Read(exINI, section, "RadLevelMax");
+		this->LevelDelay.Read(exINI, section, "RadLevelDelay");
+		this->LightDelay.Read(exINI, section, "RadLightDelay");
+		this->LevelFactor.Read(exINI, section, "RadLevelFactor");
+		this->LightFactor.Read(exINI, section, "RadLightFactor");
+		this->TintFactor.Read(exINI, section, "RadTintFactor");
+
+		RadType::DebugLog("Read");
+	} else 
+	{  //iknow this not ideal way but , this fixed that save game issue that you send on discord -Otamaa
+		RadType::LoadDefault();
+	}
+		
+}
+
+void RadType::Load(IStream* Stm) {
+	PhobosStreamReader::Process(Stm, this->ID);
+	if (strlen(ID)) {
+		this->DurationMultiple.Load(Stm);
+		this->ApplicationDelay.Load(Stm);
+		this->LevelFactor.Load(Stm);
+		this->LevelMax.Load(Stm);
+		this->LevelDelay.Load(Stm);
+		this->LightDelay.Load(Stm);
+		this->BuildingApplicationDelay.Load(Stm);
+
+		char warheadID[0x18];
+		PhobosStreamReader::Process(Stm, warheadID);
+		RadWarhead = WarheadTypeClass::Find(warheadID);
+
+		this->RadSiteColor.Load(Stm);
+		this->LightFactor.Load(Stm);
+		this->TintFactor.Load(Stm);
+
+		RadType::DebugLog("Load");
+	}
+}
+
+void RadType::Save(IStream* Stm) {
+	PhobosStreamWriter::Process(Stm, this->ID);
+	if (strlen(ID)) {
+		this->DurationMultiple.Save(Stm);
+		this->ApplicationDelay.Save(Stm);
+		this->LevelFactor.Save(Stm);
+		this->LevelMax.Save(Stm);
+		this->LevelDelay.Save(Stm);
+		this->LightDelay.Save(Stm);
+		this->BuildingApplicationDelay.Save(Stm);
+
+		PhobosStreamWriter::Process(Stm, this->RadWarhead->ID);
+
+		this->RadSiteColor.Save(Stm);
+		this->LightFactor.Save(Stm);
+		this->TintFactor.Save(Stm);
+
+		RadType::DebugLog("Save");
+	}
+}
+
+void RadType::DebugLog(const char* str) {
+	Debug::Log("%s RadType\n", str);
+
+	Debug::Log("\tID = %s\n", (char*)ID);
+
+	Debug::Log("\tDuration_Multiple = %d\n", DurationMultiple);
+	Debug::Log("\tApplicationDelay = %d\n", ApplicationDelay);
+
+	Debug::Log("\tLevelFactor = %f\n", LevelFactor);
+
+	Debug::Log("\tLevelMax = %d\n", LevelMax);
+	Debug::Log("\tLevelDelay = %d\n", LevelDelay);
+	Debug::Log("\tLightDelay = %d\n", LightDelay);
+	Debug::Log("\tBuildingApplicationDelay = %d\n", BuildingApplicationDelay);
+
+	Debug::Log("\tRadWarhead = %s\n", this->RadWarhead ? this->RadWarhead->ID : NONE_STR);
+	Debug::Log("\tRadSiteColor = %d,%d,%d\n", this->RadSiteColor.Get().R, this->RadSiteColor.Get().G, this->RadSiteColor.Get().B);
+	
+	Debug::Log("\tLightFactor = %f\n", LightFactor);
+	Debug::Log("\tTintFactor = %f\n", TintFactor);
 }
