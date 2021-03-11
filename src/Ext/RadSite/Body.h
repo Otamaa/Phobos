@@ -42,6 +42,8 @@ public:
 	static void RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount);
 	static void SetRadLevel(RadSiteClass* pRad, RadType* Type, int amount);
 	static double GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell);
+	static void RadSiteExt::DoAfterLoad(WeaponTypeClass * pWeap, RadType ptype, RadSiteClass *Rad);
+
 	//static void RadSiteClass_Radiate(RadSiteClass* pThis);
 	
 	class ExtContainer final : public Container<RadSiteExt> {
