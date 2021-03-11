@@ -260,7 +260,8 @@ protected:
 	}
 
 public:
-	value_type FindOrAllocate(key_type key) {
+	value_type FindOrAllocate(key_type key, bool* isAllocate = nullptr) {
+		if (isAllocate != nullptr) *isAllocate = false;
 		if(key == nullptr) {
 			Debug::Log("CTOR of %s attempted for a NULL pointer! WTF!\n", this->Name);
 			return nullptr;
@@ -268,6 +269,7 @@ public:
 		if(auto const ptr = this->Items.find(key)) {
 			return ptr;
 		}
+		if (isAllocate != nullptr) *isAllocate = true;
 		auto val = new extension_type(key);
 		val->EnsureConstanted();
 		return this->Items.insert(key, val);

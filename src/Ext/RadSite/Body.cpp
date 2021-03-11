@@ -15,34 +15,24 @@ DynamicVectorClass<RadSiteExt::ExtData*> RadSiteExt::RadSiteInstance;
 				-Rewriting some stuffs 
 
 */
-void RadSiteExt::DoAfterLoad(WeaponTypeClass * pWeap, RadType ptype ,RadSiteClass * Rad) {
+void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt) {
+	auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
 
-	if (auto pExt = RadSiteExt::ExtMap.FindOrAllocate(Rad)) {
-		pExt->Type = &ptype;
-		pExt->Weapon = pWeap;
-	}
-}
-
-void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt ,HouseClass* pOwner) {
-	//auto const pCell = MapClass::Instance->TryGetCellAt(location);
-	auto& Instances = RadSiteExt::RadSiteInstance;
-	auto const pRadSite = GameCreate<RadSiteClass>();//use the real ctor instead since we need to rewrite some stuffs
-	//This one is special , because it replace the hook in "CTOR"
+	//This one is special, because it replace the hook in "CTOR"
 	auto pRadExt = RadSiteExt::ExtMap.FindOrAllocate(pRadSite);
-	
-	pRadExt->TypeIndex = pWeaponExt->RadTypeIndex;
-	Debug::Log("Instance created Rad IDX is %d \n" ,pWeaponExt->RadTypeIndex);
-	pRadExt->Type = RadType::Array[pWeaponExt->RadTypeIndex].get();
-	Debug::Log("Instance created Rad is %s \n", pRadExt->Type->Name);
-//	Debug::Log("Instance Rad Color = %d,%d,%d\n", pRadExt->Type->RadSiteColor.Get().R, pRadExt->Type->RadSiteColor.Get().G, pRadExt->Type->RadSiteColor.Get().B);
-	pRadExt->Owner = pOwner;
+
+	if (pRadExt->Weapon != pWeaponExt->OwnerObject()) {
+		pRadExt->Weapon = pWeaponExt->OwnerObject();
+		pRadExt->Type = &pWeaponExt->RadType;
+	}
+
+	pRadExt->Type->DebugLog("RadSite CreateInstance");
 	pRadSite->SetBaseCell(&location);
 	pRadSite->SetSpread(spread);
 
 	RadSiteExt::SetRadLevel(pRadSite, pRadExt->Type, amount);
 
 	pRadSite->Activate();
-	//pCell->SetRadSite(pRadSite); //hmm 
 
 	if (Instances.FindItemIndex(pRadExt) == -1) {
 		Instances.AddItem(pRadExt);
@@ -81,22 +71,6 @@ double RadSiteExt::GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell) {
 	return dist > max ? 0.0 : (max - dist) / static_cast<double>(max)* pThis->RadLevel;
 }
 
-/*
-void RadSiteExt::RadSiteClass_Radiate(RadSiteClass* pThis) {
-	auto const spread = pThis->Spread;
-
-	for (auto y = -spread; y <= spread; ++y) {
-		for (auto x = -spread; x < spread; ++x) {
-			auto const cell = pThis->BaseCell + CellStruct{ x, y };
-			auto const amount = GetRadLevelAt(pThis, cell);
-
-			auto const pCell = MapClass::Instance->GetCellAt(cell);
-			pCell->RadLevel_Increase(amount);
-
-		}
-	}
-}*/
-
 // =============================
 // container
 
@@ -106,21 +80,19 @@ void RadSiteExt::ExtData::LoadFromStream(IStream* Stm) {
 	PhobosStreamReader::Process(Stm, weaponID);
 	Weapon = WeaponTypeClass::Find(weaponID);
 
-	Debug::Log("RadType Load Weapon %s \n", Weapon ? Weapon->ID : NONE_STR);
+	Debug::Log("RadSiteExt::LoadFromStream Load Weapon %s \n", Weapon ? Weapon->ID : NONE_STR);
 	
 	auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(Weapon);
 	if (pWeaponTypeExt) {
-	//	Type = &pWeaponTypeExt->RadType;
-		RadSiteExt::DoAfterLoad( pWeaponTypeExt->OwnerObject() , pWeaponTypeExt->RadType , this->OwnerObject());
-		//this->Type->DebugLog("LoadFromStream");
-	
+		Type = &pWeaponTypeExt->RadType;
+		Type->DebugLog("RadSiteExt::LoadFromStream");
 	}
 }
 
 void RadSiteExt::ExtData::SaveToStream(IStream* Stm) {
 	PhobosStreamWriter::Process(Stm, this->Weapon->ID);
 
-	Debug::Log("RadType Save %s \n", this->Weapon->ID);
+	Debug::Log("RadSiteExt::SaveToStream %s \n", this->Weapon->ID);
 }
 
 RadSiteExt::ExtContainer::ExtContainer() : Container("RadSiteClass") {
@@ -128,12 +100,28 @@ RadSiteExt::ExtContainer::ExtContainer() : Container("RadSiteClass") {
 
 RadSiteExt::ExtContainer::~ExtContainer() = default;
 
-//do do stuff here 
-//everything already handled
 DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 	GET(RadSiteClass*, pThis, ESI);
-	RadSiteExt::ExtMap.FindOrAllocate(pThis);
+	GET_STACK(BulletClass *, pBullet, 0xC);
+	if (!pBullet) return 0;
 
+	bool isAllocate;
+	
+	auto pRadExt = RadSiteExt::ExtMap.FindOrAllocate(pThis, &isAllocate);
+	if (isAllocate) {
+		RadSiteExt::RadSiteInstance.AddItem(pRadExt);
+
+		auto pWeaponType = pBullet->WeaponType;
+		auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeaponType);
+
+		pRadExt->Weapon = pWeaponType;
+		pRadExt->Type = &pWeaponTypeExt->RadType;
+		pRadExt->Type->DebugLog("RadSiteClass_CTOR");
+	}
+	else {
+		Debug::Log("RadSiteClass_CTOR");
+	}
+	
 	return 0;
 }
 
