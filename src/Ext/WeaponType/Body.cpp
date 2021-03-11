@@ -20,20 +20,23 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 		this->DiskLaser_Radius.Read(exINI, pSection, "DiskLaser.Radius");
 		this->DiskLaser_Circumference = (int)(this->DiskLaser_Radius * Math::Pi * 2);
 	}
-if (this->OwnerObject()->RadLevel > 0) { //so it wont get parsed everytime for non RadLevel weapon
-	this->RadType.Read(pINI, pSection, "RadType");
-}
+
+	// RadType
+	if (this->OwnerObject()->RadLevel > 0)
+		this->RadType.Read(pINI, pSection, "RadType");
 }
 void WeaponTypeExt::ExtData::LoadFromStream(IStream* Stm) {
-	// this->DiskLaser_Radius.Load(Stm); // There is no need to this. It is used only for LoadFromINIFile
 	this->DiskLaser_Circumference.Load(Stm);
-	this->RadType.Load(Stm);
+
+	if (this->OwnerObject()->RadLevel > 0)
+		this->RadType.Load(Stm);
 }
 
 void WeaponTypeExt::ExtData::SaveToStream(IStream* Stm)  {
-	// this->DiskLaser_Radius.Save(Stm); // There is no need to this. It is used only for LoadFromINIFile
 	this->DiskLaser_Circumference.Save(Stm);
-	this->RadType.Save(Stm);
+
+	if (this->OwnerObject()->RadLevel > 0)
+		this->RadType.Save(Stm);
 }
 
 // =============================
