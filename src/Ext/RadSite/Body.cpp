@@ -18,7 +18,7 @@ DynamicVectorClass<RadSiteExt::ExtData*> RadSiteExt::RadSiteInstance;
 void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt ,HouseClass* pOwner) {
 	//auto const pCell = MapClass::Instance->TryGetCellAt(location);
 	auto& Instances = RadSiteExt::RadSiteInstance;
-	auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
+	auto const pRadSite = GameCreate<RadSiteClass>();//use the real ctor instead since we need to rewrite some stuffs
 	//This one is special , because it replace the hook in "CTOR"
 	auto pRadExt = RadSiteExt::ExtMap.FindOrAllocate(pRadSite);
 	
@@ -57,9 +57,7 @@ void RadSiteExt::RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount) {
 void RadSiteExt::SetRadLevel(RadSiteClass* pRad, RadType* Type , int amount) {
 	
 	int mult = Type->GetDurationMultiple();
-//Commented out because the hook keep crashing 
-//write handler myself -Otamaa
-	//pRadSite->SetRadLevel(amount);
+        pRad->RadLevel = amount;
 	pRad->RadDuration = mult * amount;
 	pRad->RadTimeLeft = mult * amount;
 }
