@@ -16,9 +16,9 @@
 			 Alex-B : GetRadSiteAt ,Helper that used at FootClass_Update & BuildingClass_Update
 					  Radiate , Uncommented
 			 me(Otamaa) adding some more stuffs and rewriting hook that cause crash
+			 Belonit : Save game and assistance
 
-	TODO : -Enumerable Save/Load (if needed)
-			-Cell markings
+	TODO :  -Cell markings
 			-Testings
 
 
@@ -66,7 +66,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 	auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon);
 	auto const pRadType = &pWeaponExt->RadType;
 
-
+	
 	if (Instances.Count > 0) {
 		auto const it = std::find_if(Instances.begin(), Instances.end(),
 			[=](RadSiteExt::ExtData* const pSite) // Lambda
@@ -78,7 +78,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 			});
 		if (it == Instances.end()) {
 
-			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt);
+			RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt );
 		}
 		else {
 			auto pRadExt = *it;
@@ -92,7 +92,7 @@ DEFINE_HOOK(46ADE0, BulletClass_ApplyRadiation, 5)
 		}
 	}
 	else {
-		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt);
+		RadSiteExt::CreateInstance(location, spread, amount, pWeaponExt );
 	}
 
 	return 0x46AE5E;
@@ -131,20 +131,17 @@ DEFINE_HOOK(43FB23, BuildingClass_Update, 5)
 			if (RadLevel <= 0 || !pType->RadWarhead) {
 				continue;
 			}
+			
+			//bool absolute = false; // will prevent passanger escapes
+			//bool ignore = false; // will ignore verses
 
-			bool absolute = false; // will prevent passanger escapes
-			bool ignore = false; // will ignore verses
-
-			if (pType->RadWarhead->WallAbsoluteDestroyer) {
-				absolute = true;
-				ignore = pBuilding->Type->Wall;
-			}
-
+	
 			int Damage = static_cast<int>((RadLevel / 2) * pType->LevelFactor);
 			const int Distance = static_cast<int>(OrDistance);
+			
+			
 
-
-			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, ignore, absolute, nullptr);
+			pBuilding->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, pBuilding->Type->Wall, pType->RadWarhead->WallAbsoluteDestroyer, nullptr);
 
 		}
 	}
@@ -189,10 +186,9 @@ DEFINE_HOOK(4DA554, FootClass_Update_RadSiteClass, 5)
 			if (!pType->RadWarhead) {
 				continue;
 			}
-
+		
 			
-			
-			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, true, nullptr);
+			pFoot->ReceiveDamage(&Damage, Distance, pType->RadWarhead, nullptr, false, pType->RadWarhead->WallAbsoluteDestroyer, nullptr);
 		}
 	}
 
