@@ -26,9 +26,15 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 	this->Interceptor.Read(exINI, pSection, "Interceptor");
 	this->Interceptor_GuardRange.Read(exINI, pSection, "Interceptor.GuardRange");
 	this->Interceptor_EliteGuardRange.Read(exINI, pSection, "Interceptor.EliteGuardRange");
+	this->Powered_KillSpawns.Read(exINI, pSection, "Powered.KillSpawns");
 
 	// Ares 0.A
 	this->GroupAs.Read(pINI, pSection, "GroupAs");
+
+	//Art tags
+	INI_EX exArtINI(CCINIClass::INI_Art);
+
+	this->TurretOffset.Read(exArtINI, pThis->ImageFile, "TurretOffset");
 }
 
 void TechnoTypeExt::ExtData::LoadFromStream(IStream* Stm) {
@@ -41,6 +47,8 @@ void TechnoTypeExt::ExtData::LoadFromStream(IStream* Stm) {
 	this->Interceptor_GuardRange.Load(Stm);
 	this->Interceptor_EliteGuardRange.Load(Stm);
 	PhobosStreamReader::Process(Stm, this->GroupAs);
+	this->TurretOffset.Load(Stm);
+	this->Powered_KillSpawns.Load(Stm);
 }
 
 void TechnoTypeExt::ExtData::SaveToStream(IStream* Stm) const {
@@ -53,6 +61,8 @@ void TechnoTypeExt::ExtData::SaveToStream(IStream* Stm) const {
 	this->Interceptor_GuardRange.Save(Stm);
 	this->Interceptor_EliteGuardRange.Save(Stm);
 	PhobosStreamWriter::Process(Stm, this->GroupAs);
+	this->TurretOffset.Save(Stm);
+	this->Powered_KillSpawns.Save(Stm);
 }
 
 // =============================
@@ -121,6 +131,22 @@ DEFINE_HOOK(716123, TechnoTypeClass_LoadFromINI, 5)
 	return 0;
 }
 
+void TechnoTypeExt::ExtData::ApplyTurretOffset(Matrix3D* mtx, double factor)
+{
+	float x = static_cast<float>(this->TurretOffset.GetEx()->X * factor);
+	float y = static_cast<float>(this->TurretOffset.GetEx()->Y * factor);
+	float z = static_cast<float>(this->TurretOffset.GetEx()->Z * factor);
+
+	mtx->Translate(x, y, z);
+}
+
+void TechnoTypeExt::ApplyTurretOffset(TechnoTypeClass* pType, Matrix3D* mtx, double factor)
+{
+	auto ext = TechnoTypeExt::ExtMap.Find(pType);
+
+	ext->ApplyTurretOffset(mtx, factor);
+}
+
 
 // Ares 0.A source
 
@@ -143,4 +169,3 @@ bool TechnoTypeExt::HasSelectionGroupID(ObjectTypeClass* pType, const char* pID)
 	auto id = TechnoTypeExt::GetSelectionGroupID(pType);
 	return (_strcmpi(id, pID) == 0);
 }
-
