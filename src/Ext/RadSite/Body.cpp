@@ -26,8 +26,13 @@ void RadSiteExt::DoAfterLoad(WeaponTypeClass * pWeap, RadType ptype, RadSiteClas
 }
 
 void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt) {
-	auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
+	
+		//use real ctor 
+	//since we need to rewrite SetRadLevel
+	auto const pRadSite = GameCreate<RadSiteClass>();
 
+	//auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
+		
 	//This one is special, because it replace the hook in "CTOR"
 	auto pRadExt = RadSiteExt::ExtMap.FindOrAllocate(pRadSite);
 
