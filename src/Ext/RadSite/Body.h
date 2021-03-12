@@ -38,7 +38,8 @@ public:
 	static void RadSiteAdd(RadSiteClass* pRad, int lvmax, int amount);
 	static void SetRadLevel(RadSiteClass* pRad, RadType* Type, int amount);
 	static double GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell);
-	
+	static void DoAfterLoad(WeaponTypeClass * pWeap, RadType ptype, RadSiteClass * Rad);
+
 	class ExtContainer final : public Container<RadSiteExt> {
 	public:
 		ExtContainer();
