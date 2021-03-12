@@ -16,6 +16,15 @@ DynamicVectorClass<RadSiteExt::ExtData*> RadSiteExt::RadSiteInstance;
 				-Rewriting some stuffs 
 
 */
+void RadSiteExt::DoAfterLoad(WeaponTypeClass * pWeap, RadType ptype, RadSiteClass * Rad) {
+
+	if (auto pExt = RadSiteExt::ExtMap.FindOrAllocate(Rad)) {
+		pExt->Type = &ptype;
+		pExt->Weapon = pWeap;
+		pExt->Type->DebugLog("RadSiteExt::LoadFromStream");	}
+
+}
+
 void RadSiteExt::CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData *pWeaponExt) {
 	auto const pRadSite = GameCreate<RadSiteClass>(location, spread, amount);
 
@@ -74,7 +83,7 @@ double RadSiteExt::GetRadLevelAt(RadSiteClass* pThis, CellStruct const& cell) {
 
 // =============================
 // container
-
+/*
 void RadSiteExt::ExtData::LoadFromStream(IStream* Stm) {
 
 	char weaponID[0x18];
@@ -88,7 +97,21 @@ void RadSiteExt::ExtData::LoadFromStream(IStream* Stm) {
 		Type = &pWeaponTypeExt->RadType;
 		Type->DebugLog("RadSiteExt::LoadFromStream");
 	}
+}*/
+void RadSiteExt::ExtData::LoadFromStream(IStream* Stm) {
+
+	char weaponID[0x18];
+	PhobosStreamReader::Process(Stm, weaponID);
+	Weapon = WeaponTypeClass::Find(weaponID);
+
+	Debug::Log("RadSiteExt::LoadFromStream Load Weapon %s \n", Weapon ? Weapon->ID : NONE_STR);
+	
+	auto pWeaponTypeExt = WeaponTypeExt::ExtMap.FindOrAllocate(Weapon);
+	if (pWeaponTypeExt) {
+		RadSiteExt::DoAfterLoad(pWeaponTypeExt->OwnerObject(), pWeaponTypeExt->RadType, this->OwnerObject());
+	}
 }
+
 
 void RadSiteExt::ExtData::SaveToStream(IStream* Stm) {
 	PhobosStreamWriter::Process(Stm, this->Weapon->ID);
@@ -100,7 +123,7 @@ RadSiteExt::ExtContainer::ExtContainer() : Container("RadSiteClass") {
 }
 
 RadSiteExt::ExtContainer::~ExtContainer() = default;
-
+/*
 DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 	GET(RadSiteClass*, pThis, ESI);
 	GET_STACK(BulletClass *, pBullet, 0xC);
@@ -125,6 +148,14 @@ DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
 	}
 	
 	return 0;
+}*/
+
+DEFINE_HOOK(65B28D, RadSiteClass_CTOR, 6) {
+	GET(RadSiteClass*, pThis, ESI);
+	RadSiteExt::ExtMap.FindOrAllocate(pThis);
+
+	return 0;
+
 }
 
 
