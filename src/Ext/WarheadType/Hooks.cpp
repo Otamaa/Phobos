@@ -8,6 +8,7 @@
 #include <InfantryClass.h>
 
 #include "../../Utilities/Helpers.Alex.h"
+#include "../TechnoType/Body.h"
 
 void WarheadTypeExt::ReshroudMapForOpponents(HouseClass* pThisHouse) {
 	for (auto pOtherHouse : *HouseClass::Array) {
@@ -31,6 +32,7 @@ DEFINE_HOOK(46920B, BulletClass_Detonate, 6)
 
 	auto const pWH = pThis->WH;
 	auto const pWHExt = WarheadTypeExt::ExtMap.Find(pWH);
+	auto const pWeapon = pThis->GetWeaponType();
 
 	auto const pThisHouse = pThis->Owner ? pThis->Owner->Owner : nullptr;
 
@@ -99,6 +101,23 @@ DEFINE_HOOK(46920B, BulletClass_Detonate, 6)
 				if (auto pTarget = abstract_cast<TechnoClass*>(pThis->Target))
 					applyRemoveMindControl(pTarget);
 		}
+
+		if (pWHExt->MCTimer > 0) {
+
+			Debug::Log("BulletClass::Detonate Appying MCTimer %d \n", pWHExt->MCTimer);
+			if (pWH->MindControl && !pWeapon->InfiniteMindControl) {
+
+				if (auto pTarget = abstract_cast<TechnoClass*>(pThis->Target)) {
+
+					auto pExt = TechnoTypeExt::ExtMap.Find(pTarget->GetTechnoType());
+
+					pExt->CaptureTime.TimeLeft = pWHExt->MCTimer;
+					pExt->CaptureTime.StartTime = Unsorted::CurrentFrame;
+				}
+			}
+
+		}
+
 	}
 
 	return 0;

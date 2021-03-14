@@ -49,6 +49,14 @@ void TechnoTypeExt::ExtData::LoadFromStream(IStream* Stm) {
 	PhobosStreamReader::Process(Stm, this->GroupAs);
 	this->TurretOffset.Load(Stm);
 	this->Powered_KillSpawns.Load(Stm);
+	this->tempCaptureTime.Load(Stm);
+
+	if (this->tempCaptureTime > 0) {
+		//	this->CaptureTime.Start(this->tempTime);
+		this->CaptureTime.TimeLeft = this->tempCaptureTime;
+		this->CaptureTime.StartTime = Unsorted::CurrentFrame;
+		this->tempCaptureTime = 0;
+	}
 }
 
 void TechnoTypeExt::ExtData::SaveToStream(IStream* Stm) const {
@@ -63,6 +71,7 @@ void TechnoTypeExt::ExtData::SaveToStream(IStream* Stm) const {
 	PhobosStreamWriter::Process(Stm, this->GroupAs);
 	this->TurretOffset.Save(Stm);
 	this->Powered_KillSpawns.Save(Stm);
+	this->tempCaptureTime.Save(Stm);
 }
 
 // =============================

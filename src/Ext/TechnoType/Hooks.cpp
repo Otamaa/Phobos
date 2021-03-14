@@ -39,6 +39,22 @@ DEFINE_HOOK(6F9E50, TechnoClass_Update, 5)
 	// MindControlRangeLimit
 	if (auto Capturer = pThis->MindControlledBy) {
 		auto pCapturerExt = TechnoTypeExt::ExtMap.Find(Capturer->GetTechnoType());
+
+		auto pCapturedExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
+		//for Load and save
+		pCapturedExt->tempCaptureTime = pCapturedExt->CaptureTime.GetTimeLeft();
+
+
+
+		if (pCapturedExt->CaptureTime.Completed()) {
+			Capturer->CaptureManager->FreeUnit(pThis);
+			pCapturedExt->CaptureTime.Stop();
+			if (!pThis->IsHumanControlled) {
+				pThis->QueueMission(Mission::Hunt, 0);
+			};
+		}
+
+
 		if (pCapturerExt->MindControlRangeLimit > 0 && pThis->DistanceFrom(Capturer) > pCapturerExt->MindControlRangeLimit * 256.0) {
 			Capturer->CaptureManager->FreeUnit(pThis);
 			if (!pThis->IsHumanControlled) {

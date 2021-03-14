@@ -29,6 +29,7 @@ public:
 		Valueable<bool> RemoveMindControl;
 		Valueable<bool> RemoveMindControl_AffectAllies;
 		Valueable<bool> RemoveMindControl_ApplyCellSpread;
+		Valueable<int> MCTimer;
 
 		ExtData(WarheadTypeClass* OwnerObject) : Extension<WarheadTypeClass>(OwnerObject),
 			SpySat(false),
@@ -41,7 +42,9 @@ public:
 			RemoveDisguise_ApplyCellSpread(true),
 			RemoveMindControl(false),
 			RemoveMindControl_AffectAllies(false),
-			RemoveMindControl_ApplyCellSpread(true)
+			RemoveMindControl_ApplyCellSpread(true),
+			MCTimer(0)
+
 		{ }
 
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;

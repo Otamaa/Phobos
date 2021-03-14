@@ -31,6 +31,8 @@ public:
 		Valueable<double> Interceptor_EliteGuardRange;
 		Valueable<CoordStruct> TurretOffset;
 		Valueable<bool> Powered_KillSpawns;
+		TimerStruct CaptureTime;
+		Valueable<int> tempCaptureTime;
 
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject),
 			Deployed_RememberTarget(false),
@@ -43,7 +45,9 @@ public:
 			Interceptor_GuardRange(0.0),
 			Interceptor_EliteGuardRange(0.0),
 			TurretOffset({0, 0, 0}),
-			Powered_KillSpawns(false)
+			Powered_KillSpawns(false),
+			CaptureTime(-1),
+			tempCaptureTime(0)
 		{ }
 
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
