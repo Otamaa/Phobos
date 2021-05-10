@@ -56,6 +56,18 @@ public:
 		Nullable<int> ChronoRangeMinimum;
 		Nullable<int> ChronoDelay;
 
+        Nullable<int> HoverHeight;
+        Nullable<int> HoverBlockPathDelay;
+        Nullable<int> HoverCloseEnough;
+        Nullable<double> HoverBob;
+        Nullable<double> HoverDampen;
+        Nullable<double> HoverAcceleration;
+        Nullable<double> HoverBrake;
+        Nullable<double> HoverPathDelay;
+        Nullable<double> HoverBoost;
+        Nullable<AnimTypeClass*> HoverAboveWaterAnim;
+        NullableIdx<VocClass> HoverScoldSound;
+
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject),
 			HealthBar_Hide(false),
 			UIDescription(),
@@ -95,7 +107,17 @@ public:
 			ChronoDistanceFactor(),
 			ChronoMinimumDelay(),
 			ChronoRangeMinimum(),
-			ChronoDelay()
+			ChronoDelay(),
+            HoverHeight(),
+            HoverBob(),
+            HoverDampen(),
+            HoverAboveWaterAnim(),
+            HoverBlockPathDelay(),
+            HoverCloseEnough(),
+            HoverAcceleration(),
+            HoverBrake(),
+            HoverPathDelay(),
+            HoverScoldSound()
 		{ }
 
 		virtual ~ExtData() = default;
