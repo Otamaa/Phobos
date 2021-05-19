@@ -57,16 +57,17 @@ public:
 		Nullable<int> ChronoDelay;
 
         Nullable<int> HoverHeight;
-        Nullable<int> HoverBlockPathDelay;
-        Nullable<int> HoverCloseEnough;
         Nullable<double> HoverBob;
         Nullable<double> HoverDampen;
         Nullable<double> HoverAcceleration;
         Nullable<double> HoverBrake;
-        Nullable<double> HoverPathDelay;
         Nullable<double> HoverBoost;
-        Nullable<AnimTypeClass*> HoverAboveWaterAnim;
-        NullableIdx<VocClass> HoverScoldSound;
+
+        NullableIdx<VocClass> ScoldSound;
+        Nullable<AnimTypeClass*> AboveWaterAnim;
+        Nullable<double> PathDelay;
+        Nullable<int> BlockPathDelay;
+        Nullable<double> CloseEnough;
 
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject),
 			HealthBar_Hide(false),
@@ -111,13 +112,13 @@ public:
             HoverHeight(),
             HoverBob(),
             HoverDampen(),
-            HoverAboveWaterAnim(),
-            HoverBlockPathDelay(),
-            HoverCloseEnough(),
             HoverAcceleration(),
             HoverBrake(),
-            HoverPathDelay(),
-            HoverScoldSound()
+            ScoldSound(),
+            AboveWaterAnim(),
+            PathDelay(),
+            BlockPathDelay(),
+            CloseEnough()
 		{ }
 
 		virtual ~ExtData() = default;

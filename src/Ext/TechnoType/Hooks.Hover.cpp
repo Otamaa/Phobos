@@ -91,14 +91,14 @@ DEFINE_HOOK(513E14, HoverLocomotionClass_513D20_HoverBob, 6)
     return 0x513E20;
 }
 
-DEFINE_HOOK(514A65, HoverLocomotionClass_513D20_AnimUnderWater, B)
+DEFINE_HOOK(514A65, HoverLocomotionClass_513D20_AboveWaterWater, B)
 {
     GET_LOCO(ESI);
 
     //  Debug::Log(__FUNCTION__" called.Type [%s] \n", pType->ID);
     if (Linked)
     {
-        auto Anim = pExt->HoverAboveWaterAnim.Get(RulesClass::Instance->Wake);
+        auto Anim = pExt->AboveWaterAnim.Get(RulesClass::Instance->Wake);
         // Debug::Log(__FUNCTION__" called.Anim [%s] \n", Anim->ID);
 
         //are you guys want to hide them when cloaked ?
@@ -119,7 +119,7 @@ DEFINE_HOOK(515D55, HoverLocomotionClass_514F70_BlockedPathDelay, 6)
     GET_LOCO(EBX);
     // GET(UnitClass*, pUnit, EAX);
 
-    auto PathDelay = pExt->HoverBlockPathDelay.Get(RulesClass::Instance->BlockagePathDelay);
+    auto PathDelay = pExt->BlockPathDelay.Get(RulesClass::Instance->BlockagePathDelay);
     //  Debug::Log(__FUNCTION__" called.PathDelay [%d] \n", PathDelay);
     R->ECX(PathDelay);
 
@@ -131,10 +131,13 @@ DEFINE_HOOK(515870, HoverLocomotionClass_514F70_CloseEnough, 6)
     GET_LOCO(EBX);
     GET(int, comparator, EAX);
 
-    auto close = pExt->HoverCloseEnough.Get(RulesClass::Instance->CloseEnough);
+    auto Rules = RulesClass::Instance->CloseEnough;
+
+    if (pExt->CloseEnough.isset())
+        Rules = static_cast<int>(pExt->CloseEnough.Get() * 256.0);
     //    Debug::Log(__FUNCTION__" called.close [%d] , comp [%d]  \n", close, comparator);
 
-    return comparator < close ? 0x51587C : 0x515902;
+    return comparator < Rules ? 0x51587C : 0x515902;
 }
 
 //============================================================================================
@@ -144,10 +147,13 @@ DEFINE_HOOK(51676F, HoverLocomotionClass_5164D0_CloseEnough_B, 6)
     GET_LOCO(ESI);
     GET(int, comparator, EAX);
 
-    auto close = pExt->HoverCloseEnough.Get(RulesClass::Instance->CloseEnough);
+    auto Rules = RulesClass::Instance->CloseEnough;
+
+    if (pExt->CloseEnough.isset())
+        Rules = static_cast<int>(pExt->CloseEnough.Get() * 256.0);
     //   Debug::Log(__FUNCTION__" called.closeB [%d] , comp [%d]  \n", close, comparator);
 
-    return comparator < close ? 0x51677D : 0x5167BF;
+    return comparator < Rules ? 0x51677D : 0x5167BF;
 }
 
 DEFINE_HOOK(516179, HoverLocomotionClass_515ED0_HoverAccel, 6)
@@ -180,7 +186,7 @@ DEFINE_HOOK(516690, HoverLocomotionClass_515ED0_HoverPathDelay, 6)
     R->EBX(Unsorted::CurrentFrame); //uhh,..
     GET_LOCO(ESI);
 
-    auto pDelay = pExt->HoverPathDelay.Get(RulesClass::Instance->PathDelay);
+    auto pDelay = pExt->PathDelay.Get(RulesClass::Instance->PathDelay);
     //  Debug::Log(__FUNCTION__" called.pDelay [%fl] \n", pDelay);
 
     _asm fld qword ptr[pDelay];
@@ -192,7 +198,7 @@ DEFINE_HOOK(5167FC, HoverLocomotionClass_515ED0_ScoldSound, 5)
 {
     GET_LOCO(ESI);
 
-    auto sound = pExt->HoverScoldSound.Get(RulesClass::Instance->ScoldSound);
+    auto sound = pExt->ScoldSound.Get(RulesClass::Instance->ScoldSound);
     // Debug::Log(__FUNCTION__" called.SoundIDx [%d] \n", sound);
 
     if (sound)
@@ -203,14 +209,8 @@ DEFINE_HOOK(5167FC, HoverLocomotionClass_515ED0_ScoldSound, 5)
 
 /*Disabled , Reason : Require Spesific macros or HoverLoco Class to be defined
 //skip boost
-DEFINE_HOOK(516147, HoverLocomotionClass_515ED0_Skip_HoverBoost, 5)
-{
-//skip boost set from EDX , since it is not direct put method but call something like table from DWORD ?
-//which  add ECX,  0x5D8 -> mov EDX , [ECX]
-//modify this direcly will crash the game and broke below unk_5C
+DEFINE_LJMP(0x516147, 0x51614C);
 
-    return 0x51614C;
-}
 //set boost
 DEFINE_HOOK(51614F, HoverLocomotionClass_515ED0_HoverBoost,6)
 {

@@ -135,12 +135,14 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
     this->HoverDampen.Read(exINI, pSection, "Hover.Dampen");
     this->HoverAcceleration.Read(exINI, pSection, "Hover.Acceleration");
     this->HoverBrake.Read(exINI, pSection, "Hover.Brake");
-    this->HoverPathDelay.Read(exINI, pSection, "Hover.PathDelay");
     this->HoverBoost.Read(exINI, pSection, "Hover.Boost");
-    this->HoverAboveWaterAnim.Read(exINI, pSection, "Hover.AboveWaterAnim");
-    this->HoverBlockPathDelay.Read(exINI, pSection, "Hover.BlockPathDelay");
-    this->HoverCloseEnough.Read(exINI, pSection, "Hover.CloseEnough");
-    this->HoverScoldSound.Read(exINI, pSection, "Hover.ScoldSound");
+
+    //
+    this->PathDelay.Read(exINI, pSection, "PathDelay");
+    this->AboveWaterAnim.Read(exINI, pSection, "AboveWaterAnim");
+    this->BlockPathDelay.Read(exINI, pSection, "BlockPathDelay");
+    this->CloseEnough.Read(exINI, pSection, "CloseEnough");
+    this->ScoldSound.Read(exINI, pSection, "ScoldSound");
 
 	// Ares 0.A
 	this->GroupAs.Read(pINI, pSection, "GroupAs");
@@ -198,12 +200,13 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
         .Process(this->HoverDampen)
         .Process(this->HoverAcceleration)
         .Process(this->HoverBrake)
-        .Process(this->HoverPathDelay)
         .Process(this->HoverBoost)
-        .Process(this->HoverAboveWaterAnim)
-        .Process(this->HoverBlockPathDelay)
-        .Process(this->HoverCloseEnough)
-        .Process(this->HoverScoldSound)
+
+        .Process(this->PathDelay)
+        .Process(this->AboveWaterAnim)
+        .Process(this->BlockPathDelay)
+        .Process(this->CloseEnough)
+        .Process(this->ScoldSound)
 		;
 }
 void TechnoTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
