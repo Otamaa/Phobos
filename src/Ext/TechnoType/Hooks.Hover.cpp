@@ -4,6 +4,8 @@
 #include <AnimClass.h>
 #include <FootClass.h>
 
+#include<Utilities/Macro.h>
+
 //same stuffs as TeleportLoco , but change it to fit every Locomotor that avail around 
 //i do put this as macro on my offline branch 
 #define GET_LOCO(reg_Loco) \
@@ -207,7 +209,6 @@ DEFINE_HOOK(5167FC, HoverLocomotionClass_515ED0_ScoldSound, 5)
     return 0x516818;
 }
 
-/*Disabled , Reason : Require Spesific macros or HoverLoco Class to be defined
 //skip boost
 DEFINE_LJMP(0x516147, 0x51614C);
 
@@ -215,22 +216,17 @@ DEFINE_LJMP(0x516147, 0x51614C);
 DEFINE_HOOK(51614F, HoverLocomotionClass_515ED0_HoverBoost,6)
 {
     GET_LOCO(ESI);
-    GET_SPESIFICFROMESI(double, boost, 0x58); //try get ESI+offs same like GET/LEA STACK
-                                              //since HoverLoco Class is not defined yet
-                                              //Require custom macros on Syringe.h
+    GET(DWORD, aLoco, ESI);
+    aLoco += static_cast<DWORD>(0x58);
+
+    double boost = *reinterpret_cast<double *>(aLoco);
 
     auto vboost = pExt->HoverBoost.Get(RulesClass::Instance->HoverBoost);
-    boost += vboost;
+    boost = boost + vboost;
 
-    SET_SPESIFICFROMESI(boost, 0x58); //set boost here
-                                     //try set ESI+offs same like SET STACK do
-                                     //since HoverLoco Class is not defined yet
-                                     //Require custom macros on Syringe.h
-   // SET_FLD_B(boost);
+    *reinterpret_cast<double*>(aLoco) = boost;
 
-  //  return 0x516155;
     return 0;
 }
-*/
 
 #undef GET_LOCO
