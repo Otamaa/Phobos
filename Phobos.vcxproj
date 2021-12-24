@@ -32,6 +32,7 @@
     <ClCompile Include="src\Ext\Team\Body.cpp" />
     <ClCompile Include="src\Ext\TEvent\Hooks.cpp" />
     <ClCompile Include="src\Ext\TEvent\Body.cpp" />
+    <ClCompile Include="src\Ext\Theater\Hooks.cpp" />
     <ClCompile Include="src\Ext\Trigger\Hooks.cpp" />
     <ClCompile Include="src\Misc\CaptureManager.cpp" />
     <ClCompile Include="src\Misc\Hooks.Image.cpp" />
@@ -83,6 +84,7 @@
     <ClCompile Include="src\Misc\Hooks.Savegame.cpp" />
     <ClCompile Include="src\Misc\ExtendedToolTips.cpp" />
     <ClCompile Include="src\Misc\Selection.cpp" />
+    <ClCompile Include="src\New\Type\TheaterTypeClass.cpp" />
     <ClCompile Include="src\Utilities\Debug.cpp" />
     <ClCompile Include="src\Ext\BuildingType\Body.cpp" />
     <ClCompile Include="src\Ext\WarheadType\Body.cpp" />
@@ -115,12 +117,14 @@
     <ClInclude Include="src\Ext\TAction\Body.h" />
     <ClInclude Include="src\Ext\Team\Body.h" />
     <ClInclude Include="src\Ext\TEvent\Body.h" />
+    <ClInclude Include="src\Ext\Theater\Extra.h" />
     <ClInclude Include="src\Misc\CaptureManager.h" />
     <ClInclude Include="src\New\Entity\ShieldClass.h" />
     <ClInclude Include="src\New\Type\RadTypeClass.h" />
     <ClInclude Include="src\New\Type\ShieldTypeClass.h" />
     <ClInclude Include="src\New\Type\LaserTrailTypeClass.h" />
     <ClInclude Include="src\New\Entity\LaserTrailClass.h" />
+    <ClInclude Include="src\New\Type\TheaterTypeClass.h" />
     <ClInclude Include="src\Utilities\Enumerable.h" />
     <ClInclude Include="src\ExtraHeaders\ArmorType.h" />
     <ClInclude Include="src\Ext\Aircraft\Body.h" />
