@@ -263,7 +263,7 @@ namespace _fetchColor
 
 DEFINE_POINTER_CALL(0x47C324, _fetchColor::Exec);
 
-// these crashing a lot when ares trying to map capture
+// these crashing a lot when ares trying to map dump/save
 // i suespect CCINIClass / INIClass align is broken 
 // i checked it with static assert , dunno how to fix it 
 // thus causing this to crash with 0x0000001 EIP
@@ -276,7 +276,15 @@ namespace _fetchCCINI
 	}
 }
 
-DEFINE_POINTER_CALL(0x4AD81B, _fetchCCINI::Exec);
+//DEFINE_POINTER_CALL(0x4AD81B, _fetchCCINI::Exec);
+// Fixed !
+DEFINE_HOOK(0x4758D4, CCINIClass_PutTheater_replace, 0x6)
+{
+	GET_BASE(TheaterType, nTheater, 0xC);
+	//Debug::Log(__FUNCTION__" Exec Theater[%s] \n", TheaterTypeClass::GetIdentifier(nTheater));
+	R->EDX(TheaterTypeClass::GetIdentifier(nTheater));
+	return 0x4758DA;
+}
 
 DEFINE_HOOK(0x5997C0, RMGClass_TheaterType_initRandomMap, 0x6)
 {
