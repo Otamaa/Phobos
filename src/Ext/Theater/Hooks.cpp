@@ -263,6 +263,11 @@ namespace _fetchColor
 
 DEFINE_POINTER_CALL(0x47C324, _fetchColor::Exec);
 
+// these crashing a lot when ares trying to map capture
+// i suespect CCINIClass / INIClass align is broken 
+// i checked it with static assert , dunno how to fix it 
+// thus causing this to crash with 0x0000001 EIP
+// or maybe just my bad code , idk 
 namespace _fetchCCINI
 {
 	bool __fastcall Exec(CCINIClassFake* pThis, const char* section, const char* entry, TheaterType value)

@@ -13,7 +13,7 @@ public:
 
 	static char *__cdecl strupr(char* pInput)
 	{
-		JMP_THIS(0x7DCFC4);
+		JMP_STD(0x7DCFC4);
 	}
 
 	static ColorStruct Adjust_Brightness(ColorStruct& color, float adjust)
