@@ -8,6 +8,7 @@
 #include <VoxelAnimClass.h>
 #include <BulletClass.h>
 #include <HouseClass.h>
+#include <LineTrail.h>
 
 #include <Ext/Rules/Body.h>
 #include <Ext/BuildingType/Body.h>
@@ -360,4 +361,49 @@ DEFINE_HOOK(0x480552, CellClass_AttachesToNeighbourOverlay_Gate, 0x7)
 	}
 
 	return 0;
+}
+
+// Bugfix , line trail gone after Save Game Loaded!
+// it will redrawn because game not saving the draw code stuffs
+// Author: Otamaa
+// not sure if this 'Override' function right ? , please check 0x5F51A3 !
+static ColorStruct LineTrailOverrideColor(ColorStruct& nInput)
+{
+	auto nRulesColorOverrider = RulesClass::Instance()->LineTrailColorOverride;
+	constexpr auto __PAIR16__ = [](BYTE high, BYTE low) { return (BYTE)(((uint16_t)(high) << 8) | (uint8_t)(low)); };
+
+	if (nRulesColorOverrider.R || __PAIR16__(nRulesColorOverrider.G,0) != nRulesColorOverrider.B)
+	{
+		nInput.R = nRulesColorOverrider.R;
+		nInput.B = nRulesColorOverrider.B;
+	}
+
+	return nInput;
+}
+
+DEFINE_HOOK(0x5F3EDE, ObjectClass_AI_lineTrail, 0x6)
+{
+	GET(ObjectClass*, pThis, ESI);
+
+	auto pType = pThis->GetType();
+	if (pThis->WhatAmI() == AbstractType::Unit ||
+		pThis->WhatAmI() == AbstractType::Infantry ||
+		pThis->WhatAmI() == AbstractType::Anim ||
+		pThis->WhatAmI() == AbstractType::Bullet ||
+		pThis->WhatAmI() == AbstractType::Aircraft
+		)
+	{
+		if (!pThis->LineTrailer && pType->UseLineTrail)
+		{
+			if (auto pLineTrail = GameCreate<LineTrail>())
+			{
+				pLineTrail->Color = LineTrailOverrideColor(pType->LineTrailColor);
+				pLineTrail->SetDecrement(pType->LineTrailColorDecrement);
+				pLineTrail->Owner = pThis;
+				pThis->LineTrailer = pLineTrail;
+			}
+		}
+	}
+
+	return 0x0;
 }
