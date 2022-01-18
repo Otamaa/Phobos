@@ -5,13 +5,14 @@
 #include <Utilities/GeneralUtils.h>
 #include <Ext/Rules/Body.h>
 #include <Utilities/TemplateDef.h>
+#include <New/Type/ArmorTypeClass.h>
 
 class ShieldTypeClass final : public Enumerable<ShieldTypeClass>
 {
 public:
 	Valueable<int> Strength;
 	Nullable<int> InitialStrength;
-	ArmorType Armor;
+	ValueableIdx<ArmorTypeClass> My_Armor;
 	Valueable<bool> Powered;
 	Valueable<double> Respawn;
 	Valueable<int> Respawn_Rate;
@@ -25,7 +26,7 @@ public:
 	Nullable<AnimTypeClass*> IdleAnim;
 	Nullable<AnimTypeClass*> BreakAnim;
 	Nullable<AnimTypeClass*> HitAnim;
-	Nullable<WeaponTypeClass*> BreakWeapon;
+	PhobosFixedString<0x19> BreakWeapon; //fetch the name instead , is the size enough ?
 	Valueable<double> AbsorbPercent;
 	Valueable<double> PassPercent;
 
@@ -38,7 +39,7 @@ public:
 	ShieldTypeClass(const char* const pTitle) : Enumerable<ShieldTypeClass>(pTitle)
 		, Strength(0)
 		, InitialStrength()
-		, Armor(Armor::None)
+		, My_Armor(0)
 		, Powered(false)
 		, Respawn(0.0)
 		, Respawn_Rate(0)
@@ -64,6 +65,20 @@ public:
 	virtual void LoadFromINI(CCINIClass* pINI) override;
 	virtual void LoadFromStream(PhobosStreamReader& Stm);
 	virtual void SaveToStream(PhobosStreamWriter& Stm);
+
+	const Armor GetArmor()
+	{
+		return (Armor)My_Armor.Get();
+	}
+
+	WeaponTypeClass* GetWeapon()
+	{
+		if (BreakWeapon)
+			if(std::strlen(BreakWeapon.data()))
+				return WeaponTypeClass::Find(BreakWeapon.data());
+
+		return nullptr;
+	}
 
 private:
 	template <typename T>

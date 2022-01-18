@@ -108,9 +108,9 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 	if (pWHExt->CanTargetHouse(args->SourceHouse, this->Techno) && !args->WH->Temporal)
 	{
 		if (*args->Damage > 0)
-			nDamage = MapClass::GetTotalDamage(*args->Damage, args->WH, this->Type->Armor, args->DistanceToEpicenter);
+			nDamage = MapClass::GetTotalDamage(*args->Damage, args->WH, this->GetArmor(), args->DistanceToEpicenter);
 		else
-			nDamage = -MapClass::GetTotalDamage(-*args->Damage, args->WH, this->Type->Armor, args->DistanceToEpicenter);
+			nDamage = -MapClass::GetTotalDamage(-*args->Damage, args->WH, this->GetArmor(), args->DistanceToEpicenter);
 
 		bool affectsShield = pWHExt->Shield_AffectTypes.size() <= 0 || pWHExt->Shield_AffectTypes.Contains(this->Type);
 		double absorbPercent = affectsShield ? pWHExt->Shield_AbsorbPercent.Get(this->Type->AbsorbPercent) : this->Type->AbsorbPercent;
@@ -135,7 +135,7 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 		if (residueDamage >= 0)
 		{
 			residueDamage = int((double)(residueDamage) /
-				GeneralUtils::GetWarheadVersusArmor(args->WH, this->Type->Armor)); //only absord percentage damage
+				GeneralUtils::GetWarheadVersusArmor(args->WH, this->GetArmor())); //only absord percentage damage
 
 			this->BreakShield(pWHExt->Shield_BreakAnim.Get(nullptr), pWHExt->Shield_BreakWeapon.Get(nullptr));
 
@@ -213,7 +213,7 @@ bool ShieldClass::CanBeTargeted(WeaponTypeClass* pWeapon)
 	if ((pWHExt && CanBePenetrated(pWHExt->OwnerObject())) || !this->HP)
 		return true;
 
-	return GeneralUtils::GetWarheadVersusArmor(pWeapon->Warhead, this->Type->Armor) != 0.0;
+	return GeneralUtils::GetWarheadVersusArmor(pWeapon->Warhead, this->GetArmor()) != 0.0;
 }
 
 bool ShieldClass::CanBePenetrated(WarheadTypeClass* pWarhead)
@@ -497,7 +497,7 @@ int ShieldClass::GetPercentageAmount(double iStatus)
 
 void ShieldClass::InvalidatePointer(void* ptr)
 {
-	if (this->IdleAnim == ptr)
+	if (this->IdleAnim.get() == ptr)
 		this->KillAnim();
 }
 
@@ -523,7 +523,7 @@ void ShieldClass::BreakShield(AnimTypeClass* pBreakAnim, WeaponTypeClass* pBreak
 		}
 	}
 
-	const auto pWeaponType = pBreakWeapon ? pBreakWeapon : this->Type->BreakWeapon.Get(nullptr);
+	const auto pWeaponType = pBreakWeapon ? pBreakWeapon : this->Type->GetWeapon();
 
 	if (pWeaponType)
 		TechnoExt::FireWeaponAtSelf(this->Techno, pWeaponType);
@@ -603,7 +603,7 @@ void ShieldClass::CreateAnim()
 				pAnim->SetOwnerObject(this->Techno);
 				pAnim->Owner = this->Techno->Owner;
 				pAnim->RemainingIterations = 0xFFu;
-				this->IdleAnim = pAnim;
+				this->IdleAnim.reset(pAnim);
 			}
 		}
 	}
@@ -612,10 +612,7 @@ void ShieldClass::CreateAnim()
 void ShieldClass::KillAnim()
 {
 	if (this->IdleAnim)
-	{
-		GameDelete(this->IdleAnim);
-		this->IdleAnim = nullptr;
-	}
+		this->IdleAnim.reset(nullptr);
 }
 
 void ShieldClass::DrawShieldBar(int iLength, Point2D* pLocation, RectangleStruct* pBound)
@@ -784,4 +781,12 @@ bool ShieldClass::IsAvailable()
 bool ShieldClass::IsBrokenAndNonRespawning()
 {
 	return this->HP <= 0 && !this->Type->Respawn;
+}
+
+Armor ShieldClass::GetArmor()
+{
+	if(Type)
+		return Type->GetArmor();
+
+	return Armor::None;
 }

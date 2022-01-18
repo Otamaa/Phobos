@@ -3,6 +3,7 @@
 #include <GeneralStructures.h>
 #include <SpecificStructures.h>
 #include <Ext/TechnoType/Body.h>
+#include <AnimClass.h>
 
 class TechnoClass;
 class WarheadTypeClass;
@@ -38,7 +39,7 @@ public:
 	bool IsAvailable();
 	bool IsBrokenAndNonRespawning();
 	ShieldTypeClass* GetType();
-
+	Armor GetArmor();
 	static void SyncShieldToAnother(TechnoClass* pFrom, TechnoClass* pTo);
 
 	bool Load(PhobosStreamReader& Stm, bool RegisterForChange);
@@ -74,7 +75,7 @@ private:
 	TechnoClass* Techno;
 	char TechnoID[0x18];
 	int HP;
-	AnimClass* IdleAnim;
+	UniqueGamePtr<AnimClass> IdleAnim; //more safe way dealing with Anim
 	bool Cloak;
 	bool Online;
 	bool Temporal;

@@ -24,6 +24,7 @@
 
 #include <New/Type/RadTypeClass.h>
 #include <New/Type/LaserTrailTypeClass.h>
+#include <New/Type/ArmorTypeClass.h>
 
 #include <utility>
 
@@ -245,7 +246,8 @@ auto MassActions = MassAction <
 	// New classes
 	ShieldTypeClass,
 	LaserTrailTypeClass,
-	RadTypeClass
+	RadTypeClass,
+	ArmorTypeClass
 	// other classes
 > ();
 
