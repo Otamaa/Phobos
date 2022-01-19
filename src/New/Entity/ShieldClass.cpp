@@ -12,21 +12,21 @@
 #include <RadarEventClass.h>
 #include <TacticalClass.h>
 
-ShieldClass::ShieldClass() : Techno { nullptr }
-	, HP { 0 }
-	, Timers { }
+ShieldClass::ShieldClass() : Techno{ nullptr }
+, HP{ 0 }
+, Timers{ }
 { }
 
-ShieldClass::ShieldClass(TechnoClass* pTechno, bool isAttached) : Techno { pTechno }
-	, IdleAnim { nullptr }
-	, Timers { }
-	, Cloak { false }
-	, Online { true }
-	, Temporal { false }
-	, Available { true }
-	, Attached { isAttached }
-	, SelfHealing_Rate_Warhead { -1 }
-	, Respawn_Rate_Warhead { -1 }
+ShieldClass::ShieldClass(TechnoClass* pTechno, bool isAttached) : Techno{ pTechno }
+, IdleAnim{ nullptr }
+, Timers{ }
+, Cloak{ false }
+, Online{ true }
+, Temporal{ false }
+, Available{ true }
+, Attached{ isAttached }
+, SelfHealing_Rate_Warhead{ -1 }
+, Respawn_Rate_Warhead{ -1 }
 {
 	this->UpdateType();
 	SetHP(this->Type->InitialStrength.Get(this->Type->Strength));
@@ -301,11 +301,11 @@ void ShieldClass::AI()
 // Therefore, we must zero out the invalid pointer
 void ShieldClass::CloakCheck()
 {
-	const auto cloakState = this->Techno->CloakState;
-	this->Cloak = cloakState == CloakState::Cloaked || cloakState == CloakState::Cloaking;
+//	const auto cloakState = this->Techno->CloakState;
+//	this->Cloak = cloakState == CloakState::Cloaked || cloakState == CloakState::Cloaking;
 
-	if (this->Cloak)
-		this->IdleAnim = nullptr;
+//	if (this->Cloak)
+//		this->KillAnim();
 }
 
 void ShieldClass::OnlineCheck()
@@ -594,25 +594,35 @@ void ShieldClass::SetSelfHealing(int duration, double amount, int rate, bool res
 
 void ShieldClass::CreateAnim()
 {
-	if (!this->IdleAnim && this->Type->IdleAnim.isset())
+	if (!this->IdleAnim)
 	{
-		if (auto const pAnimType = this->Type->IdleAnim.Get())
+		if (this->Type->IdleAnim.isset())
 		{
-			if (auto const pAnim = GameCreate<AnimClass>(pAnimType, this->Techno->Location))
+			if (auto const pAnimType = this->Type->IdleAnim.Get())
 			{
-				pAnim->SetOwnerObject(this->Techno);
-				pAnim->Owner = this->Techno->Owner;
-				pAnim->RemainingIterations = 0xFFu;
-				this->IdleAnim.reset(pAnim);
+				if (auto const pAnim = GameCreate<AnimClass>(pAnimType, this->Techno->Location))
+				{
+					pAnim->SetOwnerObject(this->Techno);
+					pAnim->Owner = this->Techno->Owner;
+					pAnim->RemainingIterations = 0xFFu;
+					this->IdleAnim.reset(pAnim);
+				}
 			}
 		}
+	}
+	else
+	{
+		if (this->IdleAnim.get()->Invisible)
+			this->IdleAnim.get()->Invisible = false; // make anim visible again
 	}
 }
 
 void ShieldClass::KillAnim()
 {
-	if (this->IdleAnim)
-		this->IdleAnim.reset(nullptr);
+	//just make this invisivle , deallocating it can cause problem
+	this->IdleAnim.get()->Invisible = true;
+	//if (this->IdleAnim)
+	//	this->IdleAnim.reset(nullptr);
 }
 
 void ShieldClass::DrawShieldBar(int iLength, Point2D* pLocation, RectangleStruct* pBound)
@@ -785,7 +795,7 @@ bool ShieldClass::IsBrokenAndNonRespawning()
 
 Armor ShieldClass::GetArmor()
 {
-	if(Type)
+	if (Type)
 		return Type->GetArmor();
 
 	return Armor::None;
