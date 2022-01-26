@@ -1,7 +1,16 @@
 #include "Body.h"
+#include <Ext/BuildingType/Body.h>
 
 template<> const DWORD Extension<BuildingClass>::Canary = 0x87654321;
 BuildingExt::ExtContainer BuildingExt::ExtMap;
+
+void BuildingExt::ExtData::InitializeConstants()
+{
+	//YR doing similar thing , by memset the 8 Point2D array 
+	if (auto const& pTypeExt = BuildingTypeExt::ExtMap.Find(OwnerObject()->Type))
+		if (pTypeExt->DamageFire_Offsets.Count > 0)
+			DamageFireAnims.reserve((size_t)pTypeExt->DamageFire_Offsets.Count);
+}
 
 // =============================
 // load / save
@@ -12,6 +21,7 @@ void BuildingExt::ExtData::Serialize(T& Stm)
 	Stm
 		.Process(this->DeployedTechno)
 		.Process(this->LimboID)
+		.Process(this->DamageFireAnims)
 		;
 }
 

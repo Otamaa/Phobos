@@ -117,6 +117,9 @@ void BuildingTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 		}
 	}
 
+	if (!pArtINI->GetSection(pArtSection))
+		return;
+
 	if (pThis->MaxNumberOccupants > 10)
 	{
 		char tempBuffer[32];
@@ -132,6 +135,19 @@ void BuildingTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 		}
 	}
 
+	this->DamageFire_Offsets.Clear();
+	char tempFire_OffsBuffer[32];
+	for (int i = 0;; ++i)
+	{
+		Nullable<Point2D> nFire_offs;
+		_snprintf_s(tempFire_OffsBuffer, sizeof(tempFire_OffsBuffer), "DamageFireOffset%d", i);
+		nFire_offs.Read(exArtINI, pArtSection, tempFire_OffsBuffer);
+
+		if (!nFire_offs.isset() || nFire_offs.Get() == Point2D::Empty)
+			break;
+
+		this->DamageFire_Offsets.AddItem(nFire_offs.Get());
+	}
 }
 
 void BuildingTypeExt::ExtData::CompleteInitialization()
@@ -151,6 +167,8 @@ void BuildingTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->PowerPlantEnhancer_Factor)
 		.Process(this->SuperWeapons)
 		.Process(this->OccupierMuzzleFlashes)
+		.Process(this->DamageFire_Offsets)
+		.Process(this->DamageFire_Types)
 		;
 }
 
@@ -206,6 +224,9 @@ DEFINE_HOOK(0x45E50C, BuildingTypeClass_CTOR, 0x6)
 DEFINE_HOOK(0x45E707, BuildingTypeClass_DTOR, 0x6)
 {
 	GET(BuildingTypeClass*, pItem, ESI);
+
+	if (auto pExt = BuildingTypeExt::ExtMap.Find(pItem))
+		pExt->CleanUp();
 
 	BuildingTypeExt::ExtMap.Remove(pItem);
 	return 0;

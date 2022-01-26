@@ -22,7 +22,9 @@ public:
 		Nullable<int> PowerPlantEnhancer_Amount;
 		Nullable<float> PowerPlantEnhancer_Factor;
 
+		NullableVector<AnimTypeClass*> DamageFire_Types;
 		DynamicVectorClass<Point2D> OccupierMuzzleFlashes;
+		DynamicVectorClass<Point2D> DamageFire_Offsets;
 
 		ExtData(BuildingTypeClass* OwnerObject) : Extension<BuildingTypeClass>(OwnerObject)
 			, PowersUp_Owner { AffectedHouse::Owner }
@@ -30,7 +32,9 @@ public:
 			, PowerPlantEnhancer_Buildings {}
 			, PowerPlantEnhancer_Amount {}
 			, PowerPlantEnhancer_Factor {}
-			, OccupierMuzzleFlashes()
+			, OccupierMuzzleFlashes {}
+			, DamageFire_Offsets {}
+			, DamageFire_Types {}
 		{ }
 
 		virtual ~ExtData() = default;
@@ -39,7 +43,12 @@ public:
 		virtual void Initialize() override;
 		virtual void CompleteInitialization();
 
-		virtual void InvalidatePointer(void* ptr, bool bRemoved) override {
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
+		void CleanUp()
+		{
+			//DynamicVectorClass need to be clean up manually
+			OccupierMuzzleFlashes.Clear();
+			DamageFire_Offsets.Clear();
 		}
 
 		virtual void LoadFromStream(PhobosStreamReader & Stm) override;

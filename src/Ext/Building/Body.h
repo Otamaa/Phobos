@@ -17,10 +17,12 @@ public:
 	public:
 		Valueable<bool> DeployedTechno;
 		Valueable<int> LimboID;
+		ValueableVector<AnimClass*> DamageFireAnims;
 
 		ExtData(BuildingClass* OwnerObject) : Extension<BuildingClass>(OwnerObject)
 			, DeployedTechno { false }
 			, LimboID { -1 }
+			, DamageFireAnims { }
 
 		{ }
 
@@ -29,7 +31,7 @@ public:
 		// virtual void LoadFromINIFile(CCINIClass* pINI) override;
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
-
+		virtual void InitializeConstants() override;
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
 
