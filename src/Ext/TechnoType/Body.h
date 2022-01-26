@@ -1,5 +1,6 @@
 #pragma once
 #include <TechnoTypeClass.h>
+#include <ParticleSystemTypeClass.h>
 
 #include <Helpers/Macro.h>
 #include <Utilities/Container.h>
@@ -89,6 +90,12 @@ public:
 		Valueable<bool> DeployingAnim_UseUnitDrawer;
 		Nullable<int> DeployDir;
 
+		Nullable<TypeList<int>> Overload_Count;
+		Nullable<TypeList<int>> Overload_Damage;
+		Nullable<TypeList<int>> Overload_Frames;
+		NullableIdx<VocClass> Overload_DeathSound;
+		Nullable<ParticleSystemTypeClass*> Overload_ParticleSys;
+
 		struct LaserTrailDataEntry
 		{
 			ValueableIdx<LaserTrailTypeClass> idxType;
@@ -163,6 +170,12 @@ public:
 			, DeployingAnim_ReverseForUndeploy { true }
 			, DeployingAnim_UseUnitDrawer { true }
 			, DeployDir {}
+
+			, Overload_Count {}
+			, Overload_Damage {}
+			, Overload_Frames {}
+			, Overload_DeathSound {}
+			, Overload_ParticleSys {}
 		{ }
 
 		virtual ~ExtData() = default;
