@@ -903,14 +903,17 @@ void ScriptExt::Mission_Attack(TeamClass *pTeam, bool repeatAction = true, int c
 			&& ((pFocus->IsInAir() && leaderWeaponsHaveAA) || (!pFocus->IsInAir() && leaderWeaponsHaveAG))
 			&& !pFocus->Transporter
 			&& pFocus->IsOnMap
-			&& !pFocus->Absorbed
-			&& pFocus->Owner != pLeaderUnit->Owner
-			&& (!pLeaderUnit->Owner->IsAlliedWith(pFocus)
-				|| (pLeaderUnit->Owner->IsAlliedWith(pFocus)
-					&& pFocus->IsMindControlled()
-					&& !pLeaderUnit->Owner->IsAlliedWith(pFocus->MindControlledBy))))
+			&& !pFocus->Absorbed)
 		{
-			validFocus = true;
+			// FYI , on some edge cases the Focus loses their ownership then got targeted 
+			// it cause crash with garbage EIP
+			// this fix i can think of for now, feel free to revise it if someone has better one ! -Otamaa
+			bool bValidOwner = true;
+			if (pFocus->Owner && pLeaderUnit->Owner)
+				bValidOwner = (pFocus->Owner != pLeaderUnit->Owner && (!pLeaderUnit->Owner->IsAlliedWith(pFocus) 
+					|| (pLeaderUnit->Owner->IsAlliedWith(pFocus)) && pFocus->IsMindControlled() && !pLeaderUnit->Owner->IsAlliedWith(pFocus->MindControlledBy)));
+
+			validFocus = bValidOwner;
 		}
 
 		bool bForceNextAction = false;
