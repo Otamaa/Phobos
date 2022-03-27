@@ -16,22 +16,6 @@ int TerrainTypeExt::ExtData::GetCellsPerAnim()
 	return GeneralUtils::GetRangedRandomOrSingleValue(this->SpawnsTiberium_CellsPerAnim.Get());
 }
 
-// =============================
-// load / save
-
-template <typename T>
-void TerrainTypeExt::ExtData::Serialize(T& Stm)
-{
-	Stm
-		.Process(this->SpawnsTiberium_Type)
-		.Process(this->SpawnsTiberium_Range)
-		.Process(this->SpawnsTiberium_GrowthStage)
-		.Process(this->SpawnsTiberium_CellsPerAnim)
-		.Process(this->DestroyAnim)
-		.Process(this->DestroySound)
-		;
-}
-
 void TerrainTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 {
 	auto pThis = this->OwnerObject();
@@ -49,8 +33,30 @@ void TerrainTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->DestroyAnim.Read(exINI, pSection, "DestroyAnim");
 	this->DestroySound.Read(exINI, pSection, "DestroySound");
 
+	this->MinimapColor.Read(exINI, pSection, "MinimapColor");
+
 	//Strength is already part of ObjecTypeClass::ReadIni Duh!
 	//this->TerrainStrength.Read(exINI, pSection, "Strength");
+	AnotherData.Read_Rules(exINI, pSection);
+}
+
+// =============================
+// load / save
+
+template <typename T>
+void TerrainTypeExt::ExtData::Serialize(T& Stm)
+{
+	Stm
+		.Process(this->SpawnsTiberium_Type)
+		.Process(this->SpawnsTiberium_Range)
+		.Process(this->SpawnsTiberium_GrowthStage)
+		.Process(this->SpawnsTiberium_CellsPerAnim)
+		.Process(this->DestroyAnim)
+		.Process(this->DestroySound)
+		.Process(this->MinimapColor)
+
+		.Process(this->AnotherData)
+		;
 }
 
 void TerrainTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
@@ -91,6 +97,7 @@ DEFINE_HOOK(0x71DBC0, TerrainTypeClass_CTOR, 0x7)
 	GET(TerrainTypeClass*, pItem, ESI);
 
 	TerrainTypeExt::ExtMap.FindOrAllocate(pItem);
+	pItem->RadarInvisible = false;
 
 	return 0;
 }

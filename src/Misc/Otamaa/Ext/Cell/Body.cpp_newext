@@ -1,0 +1,37 @@
+#include "Body.h"
+
+HRESULT CellExt::ExtData::Load(IStream* pStm, AbstractClass* pOwner)
+{
+	HRESULT hr = S_OK;
+	//Owner object is not saved , re-set it after load !
+	this->SetOwnerObject(static_cast<CellExt::base_type*>(pOwner));
+	if (Phobos::Config::MoreDetailSLDebugLog)
+		Debug::Log(__FUNCTION__" Executed ! for [%x] \n", pOwner);
+
+	hr = READ(NewPowerups); FAIL_CHECK(hr);
+	return hr;
+}
+
+HRESULT CellExt::ExtData::Save(IStream* pStm)
+{
+	HRESULT hr = S_OK;
+	if (Phobos::Config::MoreDetailSLDebugLog)
+		Debug::Log(__FUNCTION__" Executed ! for [%x] \n", this->OwnerObject());
+
+	hr = WRITE(NewPowerups); FAIL_CHECK(hr);
+	return hr;
+}
+
+DEFINE_HOOK(0x47BDA3, CellClass_CTOR, 0x5)
+{
+	GET(CellClass*, pItem, EAX);
+	ExtensionWrapper::GetWrapper(pItem)->CreateExtensionObject<CellExt::ExtData>(pItem);
+	return 0;
+}
+
+DEFINE_HOOK(0x47BB60, CellClass_DTOR, 0x6)
+{
+	GET(CellClass*, pItem, ECX);
+	ExtensionWrapper::GetWrapper(pItem)->DestoryExtensionObject();
+	return 0;
+}

@@ -8,6 +8,7 @@
 #include <SpawnManagerClass.h>
 #include <InfantryClass.h>
 #include <Unsorted.h>
+#include <SlaveManagerClass.h>
 
 #include <Ext/BulletType/Body.h>
 #include <Ext/WeaponType/Body.h>
@@ -15,10 +16,30 @@
 template<> const DWORD Extension<TechnoClass>::Canary = 0x55555555;
 TechnoExt::ExtContainer TechnoExt::ExtMap;
 
+void TechnoExt::ExtData::InitializeConstants() { }
+
+bool TechnoExt::IsReallyAlive(TechnoClass* const pThis)
+{
+	return pThis && pThis->IsAlive && pThis->Health > 0;
+}
+
+int TechnoExt::GetSizeLeft(FootClass* const pFoot)
+{
+	return pFoot->GetTechnoType()->Passengers - pFoot->Passengers.GetTotalSize();
+}
+
+void TechnoExt::Stop(TechnoClass* pThis, Mission eMission)
+{
+	pThis->ForceMission(eMission);
+	pThis->CurrentTargets.Clear();
+	pThis->SetFocus(nullptr);
+	pThis->Stun();
+}
+
 bool TechnoExt::IsActive(TechnoClass* pThis)
 {
 	return
-		pThis &&
+		TechnoExt::IsReallyAlive(pThis) &&
 		!pThis->TemporalTargetingMe &&
 		!pThis->BeingWarpedOut &&
 		!pThis->IsUnderEMP() &&
@@ -80,39 +101,36 @@ void TechnoExt::ApplyInterceptor(TechnoClass* pThis)
 	if (pData && pTypeData && pTypeData->Interceptor && !pThis->Target &&
 		!(pThis->WhatAmI() == AbstractType::Aircraft && pThis->GetHeight() <= 0))
 	{
-		for (auto const& pBullet : *BulletClass::Array)
+		auto const pBulletArr = *BulletClass::Array();
+		auto const  itBullet = std::find_if(pBulletArr.begin(), pBulletArr.end(), [pThis, pTypeData, pData](BulletClass* const pBullet)
 		{
-			if (auto pBulletTypeData = BulletTypeExt::ExtMap.Find(pBullet->Type))
+			if (auto const pBulletTypeData = BulletTypeExt::ExtMap.Find(pBullet->Type))
 			{
-				if (!pBulletTypeData->Interceptable)
-					continue;
+				if (pBulletTypeData->Interceptable)
+				{
+					const auto guardRange = pThis->Veterancy.IsElite() ?
+						pTypeData->Interceptor_EliteGuardRange :
+						pTypeData->Interceptor_GuardRange;
+					const auto minguardRange = pThis->Veterancy.IsElite() ?
+						pTypeData->Interceptor_EliteMinimumGuardRange :
+						pTypeData->Interceptor_MinimumGuardRange;
+
+					auto const distance = pBullet->Location.DistanceFrom(pThis->Location);
+					if (distance > guardRange.Get() || distance < minguardRange.Get())
+					{
+						if (pThis->IsAlive && !pThis->Owner->IsAlliedWith(pBullet->Owner))
+							return true;
+					}
+				}
 			}
 
-			const auto guardRange = pThis->Veterancy.IsElite() ?
-				pTypeData->Interceptor_EliteGuardRange :
-				pTypeData->Interceptor_GuardRange;
-			const auto minguardRange = pThis->Veterancy.IsElite() ?
-				pTypeData->Interceptor_EliteMinimumGuardRange :
-				pTypeData->Interceptor_MinimumGuardRange;
+			return false;
+		});
 
-			auto distance = pBullet->Location.DistanceFrom(pThis->Location);
-			if (distance > guardRange.Get() || distance < minguardRange.Get())
-				continue;
-
-			/*
-			if (pBullet->Location.DistanceFrom(pBullet->TargetCoords) >
-				double(ScenarioClass::Instance->Random.RandomRanged(128, (int)guardRange / 10)) * 10)
-			{
-				continue;
-			}
-			*/
-
-			if (!pThis->Owner->IsAlliedWith(pBullet->Owner))
-			{
-				pThis->SetTarget(pBullet);
-				pData->InterceptedBullet = pBullet;
-				break;
-			}
+		if (itBullet != pBulletArr.end() && (*itBullet))
+		{
+			pThis->SetTarget((*itBullet));
+			pData->InterceptedBullet = (*itBullet);
 		}
 	}
 }
@@ -132,8 +150,11 @@ void TechnoExt::ApplyPowered_KillSpawns(TechnoClass* pThis)
 				{
 					if (pItem->Status == SpawnNodeStatus::Attacking || pItem->Status == SpawnNodeStatus::Returning)
 					{
-						pItem->Unit->ReceiveDamage(&pItem->Unit->Health, 0,
-							RulesClass::Instance()->C4Warhead, nullptr, false, false, nullptr);
+						if (pItem->Unit)
+						{
+							pItem->Unit->ReceiveDamage(&pItem->Unit->Health, 0,
+								RulesClass::Instance()->C4Warhead, nullptr, false, false, nullptr);
+						}
 					}
 				}
 			}
@@ -143,12 +164,12 @@ void TechnoExt::ApplyPowered_KillSpawns(TechnoClass* pThis)
 
 void TechnoExt::ApplySpawn_LimitRange(TechnoClass* pThis)
 {
-	auto const pTypeData = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
+	auto pTechnoType = pThis->GetTechnoType();
+	auto const pTypeData = TechnoTypeExt::ExtMap.Find(pTechnoType);
 	if (pTypeData && pTypeData->Spawn_LimitedRange)
 	{
 		if (auto const pManager = pThis->SpawnManager)
 		{
-			auto pTechnoType = pThis->GetTechnoType();
 			int weaponRange = 0;
 			int weaponRangeExtra = pTypeData->Spawn_LimitedExtraRange * 256;
 
@@ -204,32 +225,49 @@ bool TechnoExt::HasAvailableDock(TechnoClass* pThis)
 	return false;
 }
 
-void TechnoExt::InitializeLaserTrails(TechnoClass* pThis)
+void TechnoExt::InitializeLaserTrail(TechnoClass* pThis, bool bIsconverted)
 {
 	auto pExt = TechnoExt::ExtMap.Find(pThis);
 
-	if (pExt->LaserTrails.size())
-		return;
+	if (bIsconverted)
+		pExt->LaserTrails.clear();
 
+	size_t  nTotal = 0;
 	if (auto pTypeExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
 	{
-		for (auto const& entry : pTypeExt->LaserTrailData)
+		auto const pOwner = pThis->GetOwningHouse() ? pThis->GetOwningHouse() : HouseClass::FindCivilianSide();
+
+		if (pExt->LaserTrails.empty())
 		{
-			if (auto const pLaserType = LaserTrailTypeClass::Array[entry.idxType].get())
+			for (auto const& entry : pTypeExt->LaserTrailData)
 			{
-				pExt->LaserTrails.push_back(std::make_unique<LaserTrailClass>(
-					pLaserType, pThis->Owner, entry.FLH, entry.IsOnTurret));
+				if (auto const pLaserType = LaserTrailTypeClass::Array[entry.idxType].get())
+				{
+					pExt->LaserTrails.push_back(std::make_unique<LaserTrailClass>(
+						pLaserType, pOwner->LaserColor, entry.FLH, entry.IsOnTurret));
+					++nTotal;
+				}
 			}
 		}
+
+		if (nTotal > 0)
+			pExt->LaserTrails.resize(nTotal);
+		else
+			pExt->LaserTrails.clear();
 	}
 }
 
-void TechnoExt::InitializeShield(TechnoClass* pThis)
+void TechnoExt::InitializeItems(TechnoClass* pThis)
 {
-	auto pExt = TechnoExt::ExtMap.Find(pThis);
 
 	if (auto pTypeExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
+	{
+		auto pExt = TechnoExt::ExtMap.Find(pThis);
 		pExt->CurrentShieldType = pTypeExt->ShieldType;
+	}
+
+	TechnoExt::InitializeLaserTrail(pThis, false);
+	//TrailsManager::Construct(pThis);
 }
 
 void TechnoExt::FireWeaponAtSelf(TechnoClass* pThis, WeaponTypeClass* pWeaponType)
@@ -238,7 +276,7 @@ void TechnoExt::FireWeaponAtSelf(TechnoClass* pThis, WeaponTypeClass* pWeaponTyp
 }
 
 // reversed from 6F3D60
-CoordStruct TechnoExt::GetFLHAbsoluteCoords(TechnoClass* pThis, CoordStruct pCoord, bool isOnTurret)
+CoordStruct TechnoExt::GetFLHAbsoluteCoords(TechnoClass* pThis, CoordStruct pCoord, bool isOnTurret, CoordStruct Overrider)
 {
 	auto const pType = pThis->GetTechnoType();
 	auto const pFoot = abstract_cast<FootClass*>(pThis);
@@ -271,7 +309,7 @@ CoordStruct TechnoExt::GetFLHAbsoluteCoords(TechnoClass* pThis, CoordStruct pCoo
 	result.Y *= -1;
 
 	// Step 5: apply as an offset to global object coords
-	CoordStruct location = pThis->GetCoords();
+	CoordStruct location = Overrider ? Overrider : pThis->GetCoords();
 	location += { (int)result.X, (int)result.Y, (int)result.Z };
 
 	return location;
@@ -289,18 +327,24 @@ CoordStruct TechnoExt::GetBurstFLH(TechnoClass* pThis, int weaponIndex, bool& FL
 
 	if (pThis->Veterancy.IsElite())
 	{
-		if (pExt->EliteWeaponBurstFLHs[weaponIndex].Count > pThis->CurrentBurstIndex)
+		if (!pExt->EliteWeaponBurstFLHs.empty())
 		{
-			FLHFound = true;
-			FLH = pExt->EliteWeaponBurstFLHs[weaponIndex][pThis->CurrentBurstIndex];
+			if (pExt->EliteWeaponBurstFLHs[weaponIndex].Count > pThis->CurrentBurstIndex)
+			{
+				FLHFound = true;
+				FLH = pExt->EliteWeaponBurstFLHs[weaponIndex][pThis->CurrentBurstIndex];
+			}
 		}
 	}
 	else
 	{
-		if (pExt->WeaponBurstFLHs[weaponIndex].Count > pThis->CurrentBurstIndex)
+		if (!pExt->WeaponBurstFLHs.empty())
 		{
-			FLHFound = true;
-			FLH = pExt->WeaponBurstFLHs[weaponIndex][pThis->CurrentBurstIndex];
+			if (pExt->WeaponBurstFLHs[weaponIndex].Count > pThis->CurrentBurstIndex)
+			{
+				FLHFound = true;
+				FLH = pExt->WeaponBurstFLHs[weaponIndex][pThis->CurrentBurstIndex];
+			}
 		}
 	}
 
@@ -314,7 +358,7 @@ void TechnoExt::EatPassengers(TechnoClass* pThis)
 
 	auto const pData = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
 
-	if (pData && pData->PassengerDeletion_Rate > 0)
+	if (pData && pData->PassengerDeletion_Rate.Get() > 0)
 	{
 		auto pExt = TechnoExt::ExtMap.Find(pThis);
 
@@ -358,9 +402,8 @@ void TechnoExt::EatPassengers(TechnoClass* pThis)
 						{
 							VocClass::PlayAt(pData->PassengerDeletion_ReportSound, pThis->GetCoords(), nullptr);
 
-							if (pData->PassengerDeletion_Anim.isset())
+							if (const auto pAnimType = pData->PassengerDeletion_Anim.Get(nullptr))
 							{
-								const auto pAnimType = pData->PassengerDeletion_Anim.Get();
 								if (auto const pAnim = GameCreate<AnimClass>(pAnimType, pThis->Location))
 								{
 									pAnim->SetOwnerObject(pThis);
@@ -487,13 +530,213 @@ void TechnoExt::UpdateSharedAmmo(TechnoClass* pThis)
 						}
 
 						passenger = static_cast<FootClass*>(passenger->NextObject);
-					} while (passenger);
+					}
+					while (passenger);
 				}
 			}
 		}
 	}
 }
 
+void TechnoExt::ApplyGainedSelfHeal(TechnoClass* pThis)
+{
+	int healthDeficit = pThis->GetTechnoType()->Strength - pThis->Health;
+
+	if (pThis->Health && healthDeficit > 0)
+	{
+		if (auto const pExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
+		{
+			bool isOrganic = pThis->WhatAmI() == AbstractType::Infantry || pThis->WhatAmI() == AbstractType::Unit && pThis->GetTechnoType()->Organic;
+			auto selfHealType = pExt->SelfHealGainType.Get(isOrganic ? SelfHealGainType::Infantry : SelfHealGainType::Units);
+
+			if (selfHealType == SelfHealGainType::None)
+				return;
+
+			bool applyHeal = false;
+			int amount = 0;
+
+			if (selfHealType == SelfHealGainType::Infantry)
+			{
+				int count = RulesExt::Global()->InfantryGainSelfHealCap.isset() ?
+					std::min(std::max(RulesExt::Global()->InfantryGainSelfHealCap.Get(), 1), pThis->Owner->InfantrySelfHeal) :
+					pThis->Owner->InfantrySelfHeal;
+
+				amount = RulesClass::Instance->SelfHealInfantryAmount * count;
+
+				if (!(Unsorted::CurrentFrame % RulesClass::Instance->SelfHealInfantryFrames) && amount)
+					applyHeal = true;
+			}
+			else
+			{
+				int count = RulesExt::Global()->UnitsGainSelfHealCap.isset() ?
+					std::min(std::max(RulesExt::Global()->UnitsGainSelfHealCap.Get(), 1), pThis->Owner->UnitsSelfHeal) :
+					pThis->Owner->UnitsSelfHeal;
+
+				amount = RulesClass::Instance->SelfHealUnitAmount * count;
+
+				if (!(Unsorted::CurrentFrame % RulesClass::Instance->SelfHealUnitFrames) && amount)
+					applyHeal = true;
+			}
+
+			if (applyHeal && amount)
+			{
+				if (amount >= healthDeficit)
+					amount = healthDeficit;
+
+				pThis->Health += amount;
+
+				if (pThis->WhatAmI() == AbstractType::Unit &&
+					(pThis->GetHealthPercentage() > RulesClass::Instance->ConditionYellow ||
+						pThis->GetHeight() < -10))
+				{
+					auto dmgParticle = pThis->DamageParticleSystem;
+
+					if (dmgParticle)
+						GameDelete(dmgParticle);
+				}
+			}
+		}
+	}
+}
+
+void TechnoExt::DrawSelfHealPips(TechnoClass* pThis, Point2D* pLocation, RectangleStruct* pBounds)
+{
+	bool drawPip = false;
+	bool isOrganic = true;
+	int selfHealFrames = 0;
+
+	if (auto const pExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
+	{
+		if (pExt->SelfHealGainType.isset() && pExt->SelfHealGainType.Get() == SelfHealGainType::None)
+			return;
+
+		if (pThis->Owner->InfantrySelfHeal > 0 &&
+			((!pExt->SelfHealGainType.isset() && (pThis->WhatAmI() == AbstractType::Infantry ||
+				pThis->GetTechnoType()->Organic && pThis->WhatAmI() == AbstractType::Unit)) ||
+				pExt->SelfHealGainType.isset() && pExt->SelfHealGainType.Get() == SelfHealGainType::Infantry))
+		{
+			drawPip = true;
+			selfHealFrames = RulesClass::Instance->SelfHealInfantryFrames;
+		}
+		else if (pThis->Owner->UnitsSelfHeal > 0 &&
+			((!pExt->SelfHealGainType.isset() && pThis->WhatAmI() == AbstractType::Unit) ||
+				pExt->SelfHealGainType.isset() && pExt->SelfHealGainType.Get() == SelfHealGainType::Units))
+		{
+			drawPip = true;
+			selfHealFrames = RulesClass::Instance->SelfHealUnitFrames;
+			isOrganic = false;
+		}
+	}
+
+	if (drawPip)
+	{
+		Valueable<Point2D> pipFrames;
+		bool isSelfHealFrame = false;
+		int xOffset = 0;
+		int yOffset = 0;
+		int xOffsetExtra = 0;
+		int yOffsetExtra = 0;
+
+		if (Unsorted::CurrentFrame % selfHealFrames <= 5
+			&& pThis->Health < pThis->GetTechnoType()->Strength)
+		{
+			isSelfHealFrame = true;
+		}
+
+		if (pThis->WhatAmI() == AbstractType::Unit || pThis->WhatAmI() == AbstractType::Aircraft)
+		{
+			pipFrames = RulesExt::Global()->Pips_SelfHeal_Units;
+			xOffset = 38;
+			yOffset = -32;
+			xOffsetExtra = -5;
+			yOffsetExtra = pThis->GetTechnoType()->PixelSelectionBracketDelta;
+		}
+		else if (pThis->WhatAmI() == AbstractType::Infantry)
+		{
+			pipFrames = RulesExt::Global()->Pips_SelfHeal_Infantry;
+			xOffset = 19;
+			yOffset = -35;
+			xOffsetExtra = 6;
+			yOffsetExtra = pThis->GetTechnoType()->PixelSelectionBracketDelta;
+		}
+		else
+		{
+			auto pType = abstract_cast<BuildingTypeClass*>(pThis->GetTechnoType());
+			pipFrames = RulesExt::Global()->Pips_SelfHeal_Buildings;
+			xOffset = 38;
+			yOffset = -6;
+			xOffsetExtra = 6;
+			yOffsetExtra = -1 + pType->Height * -15;
+		}
+
+		int pipFrame = isOrganic ? pipFrames.Get().X : pipFrames.Get().Y;
+
+		Point2D position = { pLocation->X + xOffset + xOffsetExtra, pLocation->Y + yOffset + yOffsetExtra };
+
+		auto flags = BlitterFlags::bf_400 | BlitterFlags::Centered;
+
+		if (isSelfHealFrame)
+			flags = flags | BlitterFlags::Darken;
+
+		DSurface::Temp->DrawSHP(FileSystem::PALETTE_PAL, FileSystem::PIPS_SHP,
+		pipFrame, &position, pBounds, flags, 0, 0, ZGradient::Ground, 1000, 0, 0, 0, 0, 0);
+	}
+}
+
+void TechnoExt::UpdateMindControlAnim(TechnoClass* pThis)
+{
+	if (const auto pExt = TechnoExt::ExtMap.Find(pThis))
+	{
+		if (pThis->IsMindControlled())
+		{
+			if (pThis->MindControlRingAnim && !pExt->MindControlRingAnimType)
+			{
+				pExt->MindControlRingAnimType = pThis->MindControlRingAnim->Type;
+			}
+			else if (!pThis->MindControlRingAnim && pExt->MindControlRingAnimType &&
+				pThis->CloakState == CloakState::Uncloaked && !pThis->InLimbo && pThis->IsAlive)
+			{
+
+				auto coords = CoordStruct::Empty;
+				coords = *pThis->GetCoords(&coords);
+				int offset = 0;
+
+				if (const auto pBuilding = specific_cast<BuildingClass*>(pThis))
+					offset = Unsorted::LevelHeight * pBuilding->Type->Height;
+				else
+					offset = pThis->GetTechnoType()->MindControlRingOffset;
+
+				coords.Z += offset;
+				auto anim = GameCreate<AnimClass>(pExt->MindControlRingAnimType, coords, 0, 1);
+
+				if (anim)
+				{
+					pThis->MindControlRingAnim = anim;
+					pThis->MindControlRingAnim->SetOwnerObject(pThis);
+
+					if (pThis->WhatAmI() == AbstractType::Building)
+						pThis->MindControlRingAnim->ZAdjust = -1024;
+				}
+			}
+		}
+		else if (pExt->MindControlRingAnimType)
+		{
+			pExt->MindControlRingAnimType = nullptr;
+		}
+	}
+}
+
+bool TechnoExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool TechnoExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
 // =============================
 // load / save
 
@@ -510,41 +753,28 @@ void TechnoExt::ExtData::Serialize(T& Stm)
 		.Process(this->CurrentShieldType)
 		.Process(this->LastWarpDistance)
 		.Process(this->Death_Countdown)
+		.Process(this->MindControlRingAnimType)
+		.Process(this->DelayKill)
 		;
 }
-
-void TechnoExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
-{
-	Extension<TechnoClass>::LoadFromStream(Stm);
-	this->Serialize(Stm);
-}
-
-void TechnoExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
-{
-	Extension<TechnoClass>::SaveToStream(Stm);
-	this->Serialize(Stm);
-}
-
-bool TechnoExt::LoadGlobals(PhobosStreamReader& Stm)
-{
-	return Stm
-		.Success();
-}
-
-bool TechnoExt::SaveGlobals(PhobosStreamWriter& Stm)
-{
-	return Stm
-		.Success();
-}
-
-// =============================
-// container
 
 TechnoExt::ExtContainer::ExtContainer() : Container("TechnoClass") { }
 
 TechnoExt::ExtContainer::~ExtContainer() = default;
 
 void TechnoExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
+
+void TechnoExt::ExtData::LoadFromStream(PhobosStreamReader & Stm)
+{
+	Extension<TechnoClass>::LoadFromStream(Stm);
+	this->Serialize(Stm);
+}
+
+void TechnoExt::ExtData::SaveToStream(PhobosStreamWriter & Stm)
+{
+	Extension<TechnoClass>::SaveToStream(Stm);
+	this->Serialize(Stm);
+}
 
 // =============================
 // container hooks
@@ -561,6 +791,9 @@ DEFINE_HOOK(0x6F3260, TechnoClass_CTOR, 0x5)
 DEFINE_HOOK(0x6F4500, TechnoClass_DTOR, 0x5)
 {
 	GET(TechnoClass*, pItem, ECX);
+
+	if (auto pExt = TechnoExt::ExtMap.Find(pItem))
+		pExt->AnotherData.CleanUp();
 
 	TechnoExt::ExtMap.Remove(pItem);
 

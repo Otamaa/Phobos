@@ -12,6 +12,8 @@
 template<> const DWORD Extension<TEventClass>::Canary = 0x91919191;
 TEventExt::ExtContainer TEventExt::ExtMap;
 
+void TEventExt::ExtData::InitializeConstants() { }
+
 // =============================
 // load / save
 
@@ -156,12 +158,25 @@ bool TEventExt::VariableCheckBinary(TEventClass* pThis)
 	return false;
 }
 
+void TEventExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) {}
 // =============================
 // container
 
 TEventExt::ExtContainer::ExtContainer() : Container("TEventClass") { }
 
 TEventExt::ExtContainer::~ExtContainer() = default;
+
+bool TEventExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool TEventExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
 
 // =============================
 // container hooks

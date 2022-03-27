@@ -14,6 +14,7 @@ TechnoTypeExt::ExtContainer TechnoTypeExt::ExtMap;
 
 void TechnoTypeExt::ExtData::Initialize()
 {
+	this->AnotherData.Init(this->OwnerObject());
 	this->ShieldType = ShieldTypeClass::FindOrAllocate(NONE_STR);
 }
 
@@ -67,17 +68,17 @@ bool TechnoTypeExt::ExtData::IsCountedAsHarvester()
 	return false;
 }
 
-// =============================
-// load / save
-
 void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 {
 	auto pThis = this->OwnerObject();
+	const auto pArtIni = &CCINIClass::INI_Art();
 	const char* pSection = pThis->ID;
+	const char* pArtSection = pThis->ImageFile;
 
 	if (!pINI->GetSection(pSection))
 		return;
 
+	INI_EX exArtINI(pArtIni);
 	INI_EX exINI(pINI);
 
 	this->HealthBar_Hide.Read(exINI, pSection, "HealthBar.Hide");
@@ -164,13 +165,16 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->NoAmmoWeapon.Read(exINI, pSection, "NoAmmoWeapon");
 	this->NoAmmoAmount.Read(exINI, pSection, "NoAmmoAmount");
 
+	this->AnotherData.Read_Rules(this->OwnerObject(), exINI, pSection);
+
 	// Art tags
-	INI_EX exArtINI(CCINIClass::INI_Art);
-	auto pArtSection = pThis->ImageFile;
+	if (!pArtIni->GetSection(pArtSection))
+		return;
 
 	this->TurretOffset.Read(exArtINI, pArtSection, "TurretOffset");
 
 	char tempBuffer[32];
+	size_t nTotaLaserTail = 0;
 	for (size_t i = 0; ; ++i)
 	{
 		NullableIdx<LaserTrailTypeClass> trail;
@@ -189,7 +193,13 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 		isOnTurret.Read(exArtINI, pArtSection, tempBuffer);
 
 		this->LaserTrailData.push_back({ ValueableIdx<LaserTrailTypeClass>(trail), flh, isOnTurret });
+		++nTotaLaserTail;
 	}
+
+	if(nTotaLaserTail > 0)
+		this->LaserTrailData.resize(nTotaLaserTail);
+	else
+		this->LaserTrailData.clear();
 
 	bool parseMultiWeapons = pThis->TurretCount > 0 && pThis->WeaponCount > 0;
 	auto weaponCount = parseMultiWeapons ? pThis->WeaponCount : 2;
@@ -227,6 +237,10 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->ForceWeapon_Naval_Decloaked.Read(exINI, pSection, "ForceWeapon.Naval.Decloaked");
 	this->Ammo_Shared.Read(exINI, pSection, "Ammo.Shared");
 	this->Ammo_Shared_Group.Read(exINI, pSection, "Ammo.Shared.Group");
+
+	this->AnotherData.Read_Art(this->OwnerObject(), exArtINI, pArtSection);
+
+	this->SelfHealGainType.Read(exINI, pSection, "SelfHealGainType");
 }
 
 template <typename T>
@@ -305,6 +319,9 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->ForceWeapon_Naval_Decloaked)
 		.Process(this->Ammo_Shared)
 		.Process(this->Ammo_Shared_Group)
+
+		.Process(this->AnotherData)
+		.Process(this->SelfHealGainType)
 		;
 }
 void TechnoTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
@@ -336,6 +353,20 @@ bool TechnoTypeExt::ExtData::LaserTrailDataEntry::Serialize(T& stm)
 		.Process(this->idxType)
 		.Process(this->FLH)
 		.Process(this->IsOnTurret)
+		.Success();
+}
+
+void TechnoTypeExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
+
+bool TechnoTypeExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool TechnoTypeExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
 		.Success();
 }
 
@@ -398,19 +429,6 @@ DEFINE_HOOK(0x716123, TechnoTypeClass_LoadFromINI, 0x5)
 	GET_STACK(CCINIClass*, pINI, 0x380);
 
 	TechnoTypeExt::ExtMap.LoadFromINI(pItem, pINI);
-
-	return 0;
-}
-
-DEFINE_HOOK(0x679CAF, RulesClass_LoadAfterTypeData_CompleteInitialization, 0x5)
-{
-	//GET(CCINIClass*, pINI, ESI);
-
-	for (auto const& pType : *BuildingTypeClass::Array)
-	{
-		auto const pExt = BuildingTypeExt::ExtMap.Find(pType);
-		pExt->CompleteInitialization();
-	}
 
 	return 0;
 }

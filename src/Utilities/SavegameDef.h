@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <bitset>
 #include <memory>
 
@@ -14,6 +15,7 @@
 #include <FileFormats/SHP.h>
 #include <RulesClass.h>
 #include <SidebarClass.h>
+#include <queue>
 
 #include "Swizzle.h"
 #include "Debug.h"
@@ -533,6 +535,97 @@ namespace Savegame
 		bool WriteToStream(PhobosStreamWriter& Stm, const BuildType& Value) const
 		{
 			Stm.Save(Value);
+			return true;
+		}
+	};
+
+	template <typename T>
+	struct Savegame::PhobosStreamObject<std::set<T>>
+	{
+		bool ReadFromStream(PhobosStreamReader& Stm, std::set<T>& Value, bool RegisterForChange) const
+		{
+			Value.clear();
+
+			size_t Count = 0;
+			if (!Stm.Load(Count))
+			{
+				return false;
+			}
+
+			for (auto ix = 0u; ix < Count; ++ix)
+			{
+				T buffer;
+				if (!Savegame::ReadPhobosStream(Stm, buffer, RegisterForChange))
+				{
+					return false;
+				}
+				Value.insert(buffer);
+			}
+
+			return true;
+		}
+
+		bool WriteToStream(PhobosStreamWriter& Stm, const std::set<T>& Value) const
+		{
+			Stm.Save(Value.size());
+
+			for (const auto& item : Value)
+			{
+				if (!Savegame::WritePhobosStream(Stm, item))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	};
+
+
+	template <typename T>
+	struct Savegame::PhobosStreamObject<std::queue<T>>
+	{
+		bool ReadFromStream(PhobosStreamReader& Stm, std::queue<T>& Value, bool RegisterForChange) const
+		{
+			std::queue<T> Quee; //emptr
+
+			size_t nSize = 0u;
+			if (!Stm.Load(nSize))
+				return false;
+
+			if(!nSize)
+			return true;
+			else
+				Debug::Log("Found Queue<%s> with size of %d ! \n", typeid(T).name(), nSize);
+
+			for (size_t ix = 0u; ix < nSize; ++ix)
+			{
+				T buffer;
+				if (!Savegame::ReadPhobosStream(Stm, buffer, RegisterForChange))
+					return false;
+				else
+					Quee.push(buffer);
+			}
+
+			std::swap(Value, Quee);
+			return true;
+		}
+
+		bool WriteToStream(PhobosStreamWriter& Stm, const std::queue<T>& Value) const
+		{
+			std::queue<T> Quee = Value;
+			auto nSize = Quee.size();
+			Debug::Log("Saving Queue<%s> with size of %d ! \n", typeid(T).name(), nSize);
+
+			Stm.Save(nSize);
+
+			for (size_t ix = 0u; ix < nSize; ++ix)
+			{
+				if (!Savegame::WritePhobosStream(Stm, Quee.front()))
+					return false;
+				else
+					Quee.pop();
+			}
+
 			return true;
 		}
 	};

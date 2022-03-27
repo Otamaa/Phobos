@@ -62,7 +62,21 @@ enum class PhobosScripts : unsigned int
 	UnregisterGreatSuccess = 111,
 	GatherAroundLeader = 112,
 	RandomSkipNextAction = 113,
-
+	/*
+	SetHouseAngerModifier = 114,
+	OverrideOnlyTargetHouseEnemy = 115,
+	ModifyHateHouseIndex = 116,
+	ModifyHateHousesList = 117,
+	ModifyHateHousesRandomList = 118,
+	SetTheLessHatedHouse = 119,
+	SetTheMoreHatedHouse = 120,
+	SetTheMostHatedHouseRandom = 121,
+	ResetAngerAgainstHouses = 122,
+	AggroHouse = 123 ,
+	StopForceJumpCountDown = 124,
+	SetForceJumpCountDownToTheNextLine = 125,
+	SetForceJumpCountDownToTheSameLine = 126,
+	*/
 	// Variables
 	LocalVariableSet = 500,
 	LocalVariableAdd = 501,
@@ -136,6 +150,11 @@ enum class PhobosScripts : unsigned int
 	GlobalVariableXorByGlobal = 569,
 	GlobalVariableOrByGlobal = 570,
 	GlobalVariableAndByGlobal = 571,
+
+//	ChangeTeamGroup,
+//	DistributedLoading,
+//	FollowFriendlyByGroup,
+//	FollowEnemyByGroup,
 };
 
 class ScriptExt
@@ -153,18 +172,19 @@ public:
 		{ }
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override {}
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm);
 		virtual void SaveToStream(PhobosStreamWriter& Stm);
-
+		virtual void InitializeConstants() override;
 	};
 
 	class ExtContainer final : public Container<ScriptExt> {
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static void ProcessAction(TeamClass * pTeam);
@@ -192,6 +212,22 @@ public:
 	static void SetCloseEnoughDistance(TeamClass *pTeam, double distance);
 	static void SetMoveMissionEndMode(TeamClass* pTeam, int mode);
 	static void SkipNextAction(TeamClass* pTeam, int successPercentage);
+	/*
+	static void Set_ForceJump_Countdown(TeamClass* pTeam, bool repeatLine, int count);
+	static void Stop_ForceJump_Countdown(TeamClass* pTeam);
+
+	static void ResetAngerAgainstHouses(TeamClass* pTeam);
+	static void SetHouseAngerModifier(TeamClass* pTeam, int modifier);
+	static void ModifyHateHouses_List(TeamClass* pTeam, int idxHousesList);
+	static void ModifyHateHouses_List1Random(TeamClass* pTeam, int idxHousesList);
+	static void ModifyHateHouse_Index(TeamClass* pTeam, int idxHouse);
+	static void SetTheMostHatedHouse(TeamClass* pTeam, int mask, int mode, bool random);
+	static void OverrideOnlyTargetHouseEnemy(TeamClass* pTeam, int mode);
+	static void AggroHouse(TeamClass* pTeam, int index);
+	static void DebugAngerNodesData();
+	static HouseClass* GetTheMostHatedHouse(TeamClass* pTeam, int mask, int mode);
+	static void UpdateEnemyHouseIndex(HouseClass* pHouse);
+	*/
 	static FootClass* FindTheTeamLeader(TeamClass* pTeam);
 
 	static bool IsExtVariableAction(int action);
@@ -200,9 +236,15 @@ public:
 	static void VariableOperationHandler(TeamClass* pTeam, int nVariable, int Number);
 	template<bool IsSrcGlobal, bool IsGlobal, class _Pr>
 	static void VariableBinaryOperationHandler(TeamClass* pTeam, int nVariable, int nVarToOperate);
-	
+
+//	static void TeamMemberSetGroup(TeamClass* pTeam, int group);
+//	static void DistributedLoadOntoTransport(TeamClass* pTeam, bool loadOnlyFirstLevel);
+//	static bool IsValidFriendlyTarget(TeamClass* pTeam, int group, TechnoClass* target, bool isSelfNaval, bool isSelfAircraft, bool isFriendly);
+//	static void FollowTargetByGroup(TeamClass* pTeam, int group, bool isFriendly);
 
 	static ExtContainer ExtMap;
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 
 private:
 	static void ModifyCurrentTriggerWeight(TeamClass* pTeam, bool forceJumpLine, double modifier);

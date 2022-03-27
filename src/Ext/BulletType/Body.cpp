@@ -26,25 +26,29 @@ BulletTypeClass* BulletTypeExt::GetDefaultBulletType()
 void BulletTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 {
 	auto pThis = this->OwnerObject();
-	const char* pSection = pThis->ID;
+	auto pArtInI = &CCINIClass::INI_Art;
+
+	const char *pSection = pThis->ID;
+	auto pArtSection = pThis->ImageFile;
 
 	if (!pINI->GetSection(pSection))
 		return;
 
 	INI_EX exINI(pINI);
+	INI_EX exArtINI(pArtInI);
 
 	this->Interceptable.Read(exINI, pSection, "Interceptable");
 	this->Gravity.Read(exINI, pSection, "Gravity");
 	this->Gravity_HeightFix.Read(exINI, pSection, "Gravity.HeightFix");
 	this->Shrapnel_AffectsGround.Read(exINI, pSection, "Shrapnel.AffectsGround");
 	this->Shrapnel_AffectsBuildings.Read(exINI, pSection, "Shrapnel.AffectsBuildings");
+	this->AnotherData.Read_Rules(exINI, pSection);
 
-	INI_EX exArtINI(CCINIClass::INI_Art);
+	if (!pArtInI->GetSection(pArtSection))
+		return;
 
-	if (strlen(pThis->ImageFile))
-		pSection = pThis->ImageFile;
-
-	this->LaserTrail_Types.Read(exArtINI, pSection, "LaserTrail.Types");
+	this->AnotherData.Read_Art(exArtINI, pArtSection);
+	this->LaserTrail_Types.Read(exArtINI,pArtSection, "LaserTrail.Types");
 }
 
 template <typename T>
@@ -57,6 +61,8 @@ void BulletTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->Gravity_HeightFix)
 		.Process(this->Shrapnel_AffectsGround)
 		.Process(this->Shrapnel_AffectsBuildings)
+
+		.Process(this->AnotherData)
 		;
 }
 
@@ -72,12 +78,24 @@ void BulletTypeExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 	this->Serialize(Stm);
 }
 
+void BulletTypeExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) {}
+
+bool BulletTypeExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool BulletTypeExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
 
 // =============================
 // container
 
 BulletTypeExt::ExtContainer::ExtContainer() : Container("BulletTypeClass") { }
-
 BulletTypeExt::ExtContainer::~ExtContainer() = default;
 
 // =============================

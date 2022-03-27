@@ -7,6 +7,12 @@
 
 template<> const DWORD Extension<WarheadTypeClass>::Canary = 0x22222222;
 WarheadTypeExt::ExtContainer WarheadTypeExt::ExtMap;
+WarheadTypeClass* WarheadTypeExt::Temporal_WH = nullptr;
+
+void WarheadTypeExt::ExtData::Initialize()
+{
+	this->AnotherData.IsNukeWarhead = !std::strcmp(RulesExt::Global()->AnotherData.NukeWarheadName.data(), this->OwnerObject()->get_ID());
+}
 
 bool WarheadTypeExt::ExtData::CanTargetHouse(HouseClass* pHouse, TechnoClass* pTarget)
 {
@@ -127,6 +133,21 @@ void WarheadTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->Shield_AffectTypes.Read(exINI, pSection, "Shield.AffectTypes");
 
 	this->NotHuman_DeathSequence.Read(exINI, pSection, "NotHuman.DeathSequence");
+	this->Shield_MinimumReplaceDelay.Read(exINI, pSection, "Shield.MinimumReplaceDelay");
+
+	// Transact
+	this->Transact.Read(exINI, pSection, "Transact");
+	this->Transact_SpreadAmongTargets.Read(exINI, pSection, "Transact.SpreadAmongTargets");
+	this->Transact_Experience_Value.Read(exINI, pSection, "Transact.Experience.Value");
+	this->Transact_Experience_Source_Flat.Read(exINI, pSection, "Transact.Experience.Source.Flat");
+	this->Transact_Experience_Source_Percent.Read(exINI, pSection, "Transact.Experience.Source.Percent");
+	this->Transact_Experience_Source_Percent_CalcFromTarget.Read(exINI, pSection, "Transact.Experience.Source.Percent.CalcFromTarget");
+	this->Transact_Experience_Target_Flat.Read(exINI, pSection, "Transact.Experience.Target.Flat");
+	this->Transact_Experience_Target_Percent.Read(exINI, pSection, "Transact.Experience.Target.Percent");
+	this->Transact_Experience_Target_Percent_CalcFromSource.Read(exINI, pSection, "Transact.Experience.Target.Percent.CalcFromSource");
+	this->ShakeIsLocal.Read(exINI, pSection, "ShakeIsLocal");
+
+	this->AnotherData.Read(exINI, pSection);
 }
 
 template <typename T>
@@ -187,6 +208,20 @@ void WarheadTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->Shield_AffectTypes)
 
 		.Process(this->NotHuman_DeathSequence)
+
+		.Process(this->Transact)
+		.Process(this->Transact_SpreadAmongTargets)
+		.Process(this->Transact_Experience_Value)
+		.Process(this->Transact_Experience_Source_Flat)
+		.Process(this->Transact_Experience_Source_Percent)
+		.Process(this->Transact_Experience_Source_Percent_CalcFromTarget)
+		.Process(this->Transact_Experience_Target_Flat)
+		.Process(this->Transact_Experience_Target_Percent)
+		.Process(this->Transact_Experience_Target_Percent_CalcFromSource)
+
+		.Process(this->ShakeIsLocal)
+
+		.Process(AnotherData)
 		;
 }
 
@@ -204,12 +239,17 @@ void WarheadTypeExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 
 bool WarheadTypeExt::LoadGlobals(PhobosStreamReader& Stm)
 {
-	return Stm.Success();
+	return Stm
+		.Process(Temporal_WH)
+		.Success()
+		;
 }
 
 bool WarheadTypeExt::SaveGlobals(PhobosStreamWriter& Stm)
 {
-	return Stm.Success();
+	return Stm
+		.Process(Temporal_WH)
+		.Success();
 }
 
 // =============================
@@ -221,7 +261,7 @@ WarheadTypeExt::ExtContainer::~ExtContainer() = default;
 
 void WarheadTypeExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved)
 {
-
+	AnnounceInvalidPointer(WarheadTypeExt::Temporal_WH, ptr);
 }
 
 // =============================

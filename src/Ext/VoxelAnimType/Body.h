@@ -9,6 +9,7 @@
 #include <Helpers/Macro.h>
 
 #include <New/Type/LaserTrailTypeClass.h>
+#include <Misc/Otamaa/Ext/VoxelAnimType/Body.h>
 
 class VoxelAnimTypeExt
 {
@@ -21,8 +22,11 @@ public:
 
 		ValueableIdxVector<LaserTrailTypeClass> LaserTrail_Types;
 
+		Otamaa::VTExt::ExtData AnotherData;
+
 		ExtData(VoxelAnimTypeClass* OwnerObject) : Extension<VoxelAnimTypeClass>(OwnerObject)
-			, LaserTrail_Types()
+			, LaserTrail_Types { }
+			, AnotherData { }
 		{ }
 
 		virtual ~ExtData() = default;
@@ -30,7 +34,7 @@ public:
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
 
 		virtual void InvalidatePointer(void *ptr, bool bRemoved) override {}
-		virtual void Initialize() override;
+		virtual void InitializeConstants() override;
 		virtual void LoadFromStream(PhobosStreamReader& Stm)override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm)override;
 

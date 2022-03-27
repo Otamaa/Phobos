@@ -129,6 +129,27 @@ inline bool operator != (const T& other, const Valueable<T>& val) {
 	return !(val == other);
 }
 
+class ArmorType : public Valueable<int>
+{
+public:
+	template <typename T>
+	ArmorType(T value)
+	{
+		this->Value = (int)std::move(value);
+	}
+
+	template <typename T>
+	ArmorType &operator = (T value)
+	{
+		this->Value = std::move(value);
+		return *this;
+	}
+
+	operator Armor() const { return  (Armor)this->Value; }
+
+	bool Read(INI_EX &parser, const char *pSection, const char *pKey, bool Allocate = false);
+};
+
 // more fun
 template<typename Lookuper>
 class ValueableIdx : public Valueable<int> {
@@ -279,7 +300,7 @@ public:
 
 	ValueableVector() noexcept = default;
 
-	inline void Read(INI_EX& parser, const char* pSection, const char* pKey);
+	inline void Read(INI_EX& parser, const char* pSection, const char* pKey , bool bAllocate = false);
 
 	bool Contains(const T& other) const {
 		return std::find(this->begin(), this->end(), other) != this->end();
@@ -315,6 +336,10 @@ public:
 		return this->hasValue;
 	}
 
+	void Reset() {
+		this->clear();
+		this->HasValue = false;
+	}
 	using ValueableVector<T>::GetElements;
 
 	Iterator<T> GetElements(Iterator<T> default) const noexcept {

@@ -18,6 +18,7 @@ enum class PhobosTriggerAction : unsigned int
 	BinaryOperation = 504,
 	RunSuperWeaponAtLocation = 505,
 	RunSuperWeaponAtWaypoint = 506,
+	AdjustLighting, //PR
 };
 
 class TActionExt
@@ -25,26 +26,40 @@ class TActionExt
 public:
 	using base_type = TActionClass;
 
-	class ExtData final : public Extension<TActionClass>
+	class ExtData final : public Extension<base_type>
 	{
 	public:
-		ExtData(TActionClass* const OwnerObject) : Extension<TActionClass>(OwnerObject)
+		ExtData(TActionClass* const OwnerObject) : Extension<base_type>(OwnerObject)
 		{ }
 
 		virtual ~ExtData() = default;
+		virtual size_t Size() const { return sizeof(*this); }
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
-
-	private:
-		template <typename T>
-		void Serialize(T& Stm);
+		virtual void InitializeConstants() override  { }
 	};
+
+	class ExtContainer final : public Container<TActionExt>
+	{
+	public:
+		ExtContainer();
+		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
+	};
+
+	static ExtContainer ExtMap;
+
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
+
 
 	static bool Execute(TActionClass* pThis, HouseClass* pHouse,
 			ObjectClass* pObject, TriggerClass* pTrigger, CellStruct const& location, bool& bHandled);
+
+	static void RecreateLightSources();
 
 #pragma push_macro("ACTION_FUNC")
 #define ACTION_FUNC(name) \
@@ -57,20 +72,12 @@ public:
 	ACTION_FUNC(GenerateRandomNumber);
 	ACTION_FUNC(PrintVariableValue);
 	ACTION_FUNC(BinaryOperation);
+	ACTION_FUNC(AdjustLighting);
 	ACTION_FUNC(RunSuperWeaponAtLocation);
 	ACTION_FUNC(RunSuperWeaponAtWaypoint);
-
-	static bool RunSuperWeaponAt(TActionClass* pThis, int X, int Y);
 
 #undef ACTION_FUNC
 #pragma pop_macro("ACTION_FUNC")
 
-	class ExtContainer final : public Container<TActionExt>
-	{
-	public:
-		ExtContainer();
-		~ExtContainer();
-	};
-
-	static ExtContainer ExtMap;
+	static bool RunSuperWeaponAt(TActionClass* pThis, short X, short Y);
 };

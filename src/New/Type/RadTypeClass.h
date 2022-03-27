@@ -5,7 +5,7 @@
 #include <Utilities/GeneralUtils.h>
 #include <Ext/Rules/Body.h>
 
-class WarheadTypeClass;
+#include <WarheadTypeClass.h>
 
 class RadTypeClass final : public Enumerable<RadTypeClass>
 {
@@ -18,6 +18,7 @@ private:
 	Nullable<int> LevelDelay;
 	Nullable<int> LightDelay;
 	Nullable<WarheadTypeClass*> RadWarhead;
+	//PhobosFixedString<32> RadWarhead;
 	Nullable<ColorStruct> RadSiteColor;
 	Nullable<double> LightFactor;
 	Nullable<double> TintFactor;
@@ -42,9 +43,13 @@ public:
 
 	static void AddDefaults();
 
-	WarheadTypeClass* GetWarhead() const
+	WarheadTypeClass* GetWarhead()
 	{
-		return this->RadWarhead.Get(RulesClass::Instance->RadSiteWarhead);
+		//WarheadTypeClass* pLoaded = nullptr;
+		//if (RadWarhead)
+		//	pLoaded =  WarheadTypeClass::FindOrAllocate(RadWarhead.data());
+
+		return RadWarhead.Get(RulesClass::Instance->RadSiteWarhead);
 	}
 
 	const ColorStruct& GetColor() const
@@ -57,14 +62,14 @@ public:
 		return this->DurationMultiple.Get(RulesClass::Instance->RadDurationMultiple);
 	}
 
-	int GetApplicationDelay() const
+	int GetApplicationDelay()
 	{
-		return this->ApplicationDelay.Get(RulesClass::Instance->RadApplicationDelay);
+		return abs(this->ApplicationDelay.Get(RulesClass::Instance->RadApplicationDelay));
 	}
 
-	int GetBuildingApplicationDelay() const
+	int GetBuildingApplicationDelay()
 	{
-		return this->BuildingApplicationDelay.Get(RulesExt::Global()->RadApplicationDelay_Building);
+		return abs(this->BuildingApplicationDelay.Get(RulesExt::Global()->RadApplicationDelay_Building));
 	}
 
 	int GetLevelMax() const

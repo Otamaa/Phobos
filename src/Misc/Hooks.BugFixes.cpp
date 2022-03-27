@@ -8,6 +8,7 @@
 #include <VoxelAnimClass.h>
 #include <BulletClass.h>
 #include <HouseClass.h>
+#include <JumpjetLocomotionClass.h>
 
 #include <Ext/Rules/Body.h>
 #include <Ext/BuildingType/Body.h>
@@ -102,28 +103,32 @@ DEFINE_HOOK(0x702299, TechnoClass_ReceiveDamage_DebrisMaximumsFix, 0xA)
 
 	if (pType->DebrisTypes.Count > 0 && pType->DebrisMaximums.Count > 0)
 	{
-		auto cord = pThis->GetCoords();
+		auto nCoords = pThis->GetCenterCoord();
+
 		for (int currentIndex = 0; currentIndex < pType->DebrisTypes.Count; ++currentIndex)
 		{
 			if (pType->DebrisMaximums.GetItem(currentIndex) > 0)
 			{
-				int adjustedMaximum = Math::min(pType->DebrisMaximums.GetItem(currentIndex), pType->MaxDebris);
-				int amountToSpawn = abs(ScenarioClass::Instance->Random.Random()) % (adjustedMaximum + 1); //0x702337
-				amountToSpawn = Math::min(amountToSpawn, totalSpawnAmount);
+				int amountToSpawn = abs(int(ScenarioGlobal->Random.Random())) % pType->DebrisMaximums.GetItem(currentIndex) + 1;
+				amountToSpawn = Math::LessOrEqualTo(amountToSpawn, totalSpawnAmount);
 				totalSpawnAmount -= amountToSpawn;
 
 				for (; amountToSpawn > 0; --amountToSpawn)
 				{
 					GameCreate<VoxelAnimClass>(pType->DebrisTypes.GetItem(currentIndex),
-						&cord, pThis->Owner);
+						&nCoords, pThis->Owner);
 				}
 
-				if (totalSpawnAmount < 1)
+				if (totalSpawnAmount <= 0)
+				{
+					totalSpawnAmount = 0;
 					break;
+				}
 			}
 		}
 	}
 
+	// debrisanim has no owner , duh
 	R->EBX(totalSpawnAmount);
 
 	return 0x7023E5;
@@ -234,8 +239,8 @@ DEFINE_HOOK(0x70D77F, TechnoClass_FireDeathWeapon_ProjectileFix, 0x8)
 DEFINE_HOOK(0x7115AE, TechnoTypeClass_CTOR_JumpjetControls, 0xA)
 {
 	GET(TechnoTypeClass*, pThis, ESI);
-	auto pRules = RulesClass::Instance();
-	auto pRulesExt = RulesExt::Global();
+	auto const pRules = RulesClass::Instance();
+	auto const pRulesExt = RulesExt::Global();
 
 	pThis->JumpjetTurnRate = pRules->TurnRate;
 	pThis->JumpjetSpeed = pRules->Speed;
@@ -258,6 +263,7 @@ DEFINE_HOOK(0x52D0F9, InitRules_EarlyLoadJumpjetControls, 0x6)
 	GET(RulesClass*, pThis, ECX);
 	GET(CCINIClass*, pINI, EAX);
 
+	RulesExt::LoadEarlyBeforeColor(pThis, pINI);
 	pThis->Read_JumpjetControls(pINI);
 
 	return 0;
@@ -265,15 +271,14 @@ DEFINE_HOOK(0x52D0F9, InitRules_EarlyLoadJumpjetControls, 0x6)
 
 DEFINE_HOOK(0x6744E4, RulesClass_ReadJumpjetControls_Extra, 0x7)
 {
-	auto pRulesExt = RulesExt::Global();
-	if (!pRulesExt)
-		return 0;
+	if (auto pRulesExt = RulesExt::Global())
+	{
+		GET(CCINIClass*, pINI, EDI);
+		INI_EX exINI(pINI);
 
-	GET(CCINIClass*, pINI, EDI);
-	INI_EX exINI(pINI);
-
-	pRulesExt->JumpjetCrash.Read(exINI, "JumpjetControls", "Crash");
-	pRulesExt->JumpjetNoWobbles.Read(exINI, "JumpjetControls", "NoWobbles");
+		pRulesExt->JumpjetCrash.Read(exINI, "JumpjetControls", "Crash");
+		pRulesExt->JumpjetNoWobbles.Read(exINI, "JumpjetControls", "NoWobbles");
+	}
 
 	return 0;
 }
@@ -365,3 +370,100 @@ DEFINE_HOOK(0x480552, CellClass_AttachesToNeighbourOverlay_Gate, 0x7)
 
 	return 0;
 }
+
+// WW take 1 second as 960 milliseconds, this will fix that back to the actual time.
+// Author: secsome
+DEFINE_HOOK(0x6C919F, StandaloneScore_SinglePlayerScoreDialog_ActualTime, 0x5)
+{
+	R->ECX(static_cast<int>(std::round(R->ECX() * 0.96)));
+	return 0;
+}
+
+
+// Fix the issue that SHP units doesn't apply IronCurtain or other color effects and doesn't accept EMP intensity
+// Author: secsome
+DEFINE_HOOK(0x706389, TechnoClass_DrawAsSHP_TintAndIntensity, 0x6)
+{
+	GET(TechnoClass*, pThis, ESI);
+	GET(int, nIntensity, EBP);
+	REF_STACK(int, nTintColor, STACK_OFFS(0x54, -0x2C));
+
+	if (pThis->IsIronCurtained())
+		nTintColor |= Drawing::RGB2DWORD(RulesGlobal->ColorAdd[RulesGlobal->IronCurtainColor]);
+
+	if (pThis->ForceShielded)
+		nTintColor |= Drawing::RGB2DWORD(RulesGlobal->ColorAdd[RulesGlobal->ForceShieldColor]);
+
+	if (pThis->Berzerk)
+		nTintColor |= Drawing::RGB2DWORD(RulesGlobal->ColorAdd[RulesGlobal->BerserkColor]);
+
+	// Boris
+	if (pThis->Airstrike && pThis->Airstrike->Target == pThis)
+		nTintColor |= Drawing::RGB2DWORD(RulesGlobal->ColorAdd[RulesGlobal->LaserTargetColor]);
+
+	// EMP
+	if (pThis->Deactivated)
+		R->EBP(nIntensity / 2);
+
+	return 0;
+}
+
+// Fixed the bug that units' lighting get corrupted after loading a save with a different lighting being set
+// Author: secsome
+DEFINE_HOOK(0x67E6E5, LoadGame_RecalcLighting, 0x7)
+{
+	ScenarioClass::Instance->RecalcLighting(
+		ScenarioClass::Instance->NormalLighting.Tint.Red * 10,
+		ScenarioClass::Instance->NormalLighting.Tint.Green * 10,
+		ScenarioClass::Instance->NormalLighting.Tint.Blue * 10,
+		0
+	);
+
+	return 0;
+}
+
+/*
+DEFINE_HOOK(0x4CFE21, FlyLocomotionClass_Apparent_Speed_Modifiers, 0x7)
+{
+	enum { SkipGameCode = 0x4CFE3E };
+
+	//GET_STACK(FlyLocomotionClass*, pThis, STACK_OFFS(0x4, 0x4));
+	GET(FlyLocomotionClass*, pThis, ESI);
+
+	auto pFoot = pThis->LinkedTo;
+	auto nTechSpeedTotal = pFoot->GetTechnoType()->Speed;
+	auto nFootSpeedMult = pFoot->SpeedMultiplier;
+	auto nAbilitySpeed = (pFoot->HasAbility(AbilityType::Faster) ? RulesClass::Instance->VeteranSpeed : 1.0);
+
+	double currentSpeed = nTechSpeedTotal * pThis->CurrentSpeed *
+		nFootSpeedMult * pFoot->Owner->Type->SpeedAircraftMult *
+		nAbilitySpeed;
+
+	R->EAX((int)(abs(currentSpeed)));
+
+	return SkipGameCode;
+}
+
+DEFINE_HOOK(0x54D138, JumpjetLocomotionClass_Movement_AI_SpeedModifiers, 0x6)
+{
+	GET(JumpjetLocomotionClass*, pThis, ESI);
+
+	if (pThis->__currentSpeed > 0.0)
+	{
+		auto const pFoot = pThis->LinkedTo;
+
+		double houseMultiplier = 1.0;
+
+		if (pFoot->WhatAmI() == AbstractType::Infantry)
+			houseMultiplier = pFoot->Owner->Type->SpeedInfantryMult;
+		else
+			houseMultiplier = pFoot->Owner->Type->SpeedUnitsMult;
+
+		double multiplier = pFoot->SpeedMultiplier * houseMultiplier *
+			(pFoot->HasAbility(AbilityType::Faster) ? RulesClass::Instance->VeteranSpeed : 1.0);
+
+		pThis->Speed = (int)(pFoot->GetTechnoType()->JumpjetSpeed * multiplier);
+	}
+
+	return 0;
+}*/

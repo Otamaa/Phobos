@@ -14,12 +14,22 @@ DEFINE_HOOK(0x6A593E, SidebarClass_InitForHouse_AdditionalFiles, 0x5)
 		sprintf_s(filename, "tab%02dpp.shp", i);
 		SidebarExt::TabProducingProgress[i] = GameCreate<SHPReference>(filename);
 	}
-
+	auto const pSHape = GameCreate<SHPReference>("mouse_side.sha");
+	if (pSHape && pSHape->Frames)
+	{
+		SidebarExt::SidesMouseShape = (SHPStruct *)pSHape;
+	}
 	return 0;
 }
 
 DEFINE_HOOK(0x6A5EA1, SidebarClass_UnloadShapes_AdditionalFiles, 0x5)
 {
+	if (SidebarExt::SidesMouseShape)
+	{
+		GameDelete(SidebarExt::SidesMouseShape);
+		SidebarExt::SidesMouseShape = nullptr;
+	}
+
 	for (int i = 0; i < 4; i++)
 	{
 		if (SidebarExt::TabProducingProgress[i])

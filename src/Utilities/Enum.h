@@ -34,6 +34,12 @@
 
 #include <Phobos.h>
 
+enum class TransactValueType : int
+{
+	Experience = 0,
+	// Other....
+};
+
 enum class AttachedAnimFlag {
 	None = 0x0,
 	Hides = 0x1,
@@ -42,7 +48,6 @@ enum class AttachedAnimFlag {
 
 	PausedTemporal = Paused | Temporal
 };
-
 MAKE_ENUM_FLAGS(AttachedAnimFlag);
 
 enum class AirAttackStatus
@@ -106,7 +111,6 @@ enum class AffectedHouse : unsigned char {
 	NotOwner = Allies | Enemies,
 	All = Owner | Allies | Enemies
 };
-
 MAKE_ENUM_FLAGS(AffectedHouse);
 
 enum class OwnerHouseKind : int {
@@ -133,8 +137,6 @@ enum class SuperWeaponFlags : unsigned short {
 	PostClick = 0x100
 };
 
-MAKE_ENUM_FLAGS(SuperWeaponFlags);
-
 enum class AreaFireTarget
 {
 	Base = 0,
@@ -148,6 +150,13 @@ enum class PhobosAction {
 	Drive = 2
 };
 
+enum class SelfHealGainType
+{
+	None = 0,
+	Infantry = 1,
+	Units = 2
+};
+
 enum class TextAlign : int
 {
 	None = 0xFFF,
@@ -155,8 +164,6 @@ enum class TextAlign : int
 	Center = 0x100,
 	Right = 0x200,
 };
-
-MAKE_ENUM_FLAGS(TextAlign);
 
 class MouseCursorHotSpotX {
 public:

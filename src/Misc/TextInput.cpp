@@ -3,7 +3,7 @@
 // Allow message entry in Skirmish
 // DEFINE_LJMP(0x55E484, 0x55E48D);
 
-wchar_t* IMEBuffer = reinterpret_cast<wchar_t*>(0xB730EC);
+wchar_t* IMEBuffer = Make_Pointer<wchar_t>(0xB730EC);
 
 UINT GetCurentCodepage()
 {

@@ -17,7 +17,7 @@ DEFINE_HOOK(0x6F64A9, TechnoClass_DrawHealthBar_Hide, 0x5)
 {
 	GET(TechnoClass*, pThis, ECX);
 	auto pTypeData = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
-	if (pTypeData && pTypeData->HealthBar_Hide)
+	if ((pTypeData && pTypeData->HealthBar_Hide) || pThis->TemporalTargetingMe || pThis->IsSinking)
 		return 0x6F6AB6;
 
 	return 0;
@@ -60,7 +60,7 @@ DEFINE_HOOK(0x73BA4C, UnitClass_DrawVXL_TurretMultiOffset1, 0x0)
 	LEA_STACK(Matrix3D*, mtx, STACK_OFFS(0x1D0, 0x13C));
 	GET(TechnoTypeClass*, technoType, EBX);
 
-	double& factor = *reinterpret_cast<double*>(0xB1D008);
+	double& factor = Make_Global<double>(0xB1D008);
 
 	TechnoTypeExt::ApplyTurretOffset(technoType, mtx, factor);
 
@@ -125,9 +125,10 @@ DEFINE_HOOK(0x73D223, UnitClass_DrawIt_OreGath, 0x6)
 	{
 		auto const pAnimType = pData->OreGathering_Anims.size() > 0 ? pData->OreGathering_Anims[idxArray] : nullptr;
 		auto const nFramesPerFacing = pData->OreGathering_FramesPerDir.size() > 0 ? pData->OreGathering_FramesPerDir[idxArray] : 15;
-		auto const pAnimExt = AnimTypeExt::ExtMap.Find(pAnimType);
+
 		if (pAnimType)
 		{
+			auto const pAnimExt = AnimTypeExt::ExtMap.Find(pAnimType);
 			pSHP = pAnimType->GetImage();
 			if (auto const pPalette = pAnimExt->Palette.GetConvert())
 				pDrawer = pPalette;
@@ -171,6 +172,12 @@ DEFINE_HOOK(0x6F421C, TechnoClass_DefaultDisguise, 0x6) // TechnoClass_DefaultDi
 
 	if (auto const pExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
 	{
+		if ((R->Origin() == 0x6F421C) && pThis->WhatAmI() == AbstractType::Unit && pExt->AnotherData.TankDisguiseAsTank.Get())
+		{
+			pThis->Disguised = false;
+			return DefaultDisguise;
+		}
+
 		if (pExt->DefaultDisguise.isset())
 		{
 			pThis->Disguise = pExt->DefaultDisguise;
@@ -209,7 +216,7 @@ DEFINE_HOOK(0x73CF46, UnitClass_Draw_It_KeepUnitVisible, 0x6)
 
 	auto pTypeExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
 
-	if (pTypeExt->DeployingAnim_KeepUnitVisible && (pThis->Deploying || pThis->Undeploying))
+	if (pTypeExt && pTypeExt->DeployingAnim_KeepUnitVisible && (pThis->Deploying || pThis->Undeploying))
 		return 0x73CF62;
 
 	return 0;

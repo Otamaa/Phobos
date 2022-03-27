@@ -1,7 +1,10 @@
 #include "Body.h"
 
+#include <Ext/Bullet/Body.h>
+
 template<> const DWORD Extension<WeaponTypeClass>::Canary = 0x22222222;
 WeaponTypeExt::ExtContainer WeaponTypeExt::ExtMap;
+WeaponTypeClass *WeaponTypeExt::Temporal_WP = nullptr;
 
 void WeaponTypeExt::ExtData::Initialize()
 {
@@ -30,13 +33,12 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->Bolt_Disable2.Read(exINI, pSection, "Bolt.Disable2");
 	this->Bolt_Disable3.Read(exINI, pSection, "Bolt.Disable3");
 
-	// RadTypeClass
-//	if (this->OwnerObject()->RadLevel > 0)
-//	{
-	this->RadType.Read(exINI, pSection, "RadType", true);
-	//	Debug::Log("Weapon[%s] :: Has RadLevel[%d] Rad check [%s]  \n", pSection , this->OwnerObject()->RadLevel , this->RadType->Name.data());
-	this->Rad_NoOwner.Read(exINI, pSection, "Rad.NoOwner");
-	//	}
+	if (!Phobos::Config::DisableCustomRadSite)
+	{
+		this->RadType.Read(exINI, pSection, "RadType", true);
+		//	Debug::Log("Weapon[%s] :: Has RadLevel[%d] Rad check [%s]  \n", pSection , this->OwnerObject()->RadLevel , this->RadType->Name.data());
+		this->Rad_NoOwner.Read(exINI, pSection, "Rad.NoOwner");
+	}
 
 	this->Strafing_Shots.Read(exINI, pSection, "Strafing.Shots");
 	this->Strafing_SimulateBurst.Read(exINI, pSection, "Strafing.SimulateBurst");
@@ -44,6 +46,11 @@ void WeaponTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->CanTargetHouses.Read(exINI, pSection, "CanTargetHouses");
 	this->Burst_Delays.Read(exINI, pSection, "Burst.Delays");
 	this->AreaFire_Target.Read(exINI, pSection, "AreaFire.Target");
+
+	this->DetachedFromOwner.Read(exINI, pSection, "DetachedFromOwner");
+	this->FeedbackWeapon.Read(exINI, pSection, "FeedbackWeapon", true);
+
+	this->AnotherData.Read(exINI, pSection);
 }
 
 template <typename T>
@@ -63,8 +70,18 @@ void WeaponTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->RadType)
 		.Process(this->Burst_Delays)
 		.Process(this->AreaFire_Target)
+
+		.Process(this->DetachedFromOwner)
+		.Process(this->FeedbackWeapon)
+
+		.Process(this->AnotherData)
 		;
 };
+
+void WeaponTypeExt::ExtContainer::InvalidatePointer(void *ptr, bool bRemoved)
+{
+	AnnounceInvalidPointer(WeaponTypeExt::Temporal_WP, ptr);
+}
 
 void WeaponTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
 {
@@ -82,6 +99,7 @@ void WeaponTypeExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 bool WeaponTypeExt::LoadGlobals(PhobosStreamReader& Stm)
 {
 	return Stm
+		.Process(Temporal_WP)
 		.Process(nOldCircumference)
 		.Success();
 }
@@ -89,6 +107,7 @@ bool WeaponTypeExt::LoadGlobals(PhobosStreamReader& Stm)
 bool WeaponTypeExt::SaveGlobals(PhobosStreamWriter& Stm)
 {
 	return Stm
+		.Process(Temporal_WP)
 		.Process(nOldCircumference)
 		.Success();
 }
@@ -116,6 +135,22 @@ void WeaponTypeExt::DetonateAt(WeaponTypeClass* pThis, ObjectClass* pTarget, Tec
 void WeaponTypeExt::DetonateAt(WeaponTypeClass* pThis, const CoordStruct& coords, TechnoClass* pOwner)
 {
 	WeaponTypeExt::DetonateAt(pThis, coords, pOwner, pThis->Damage);
+}
+
+bool WeaponTypeExt::DetonateAt(WeaponTypeClass* pThis, const CoordStruct& coords)
+{
+	if (BulletClass* pBullet = pThis->Projectile->CreateBullet(Map[coords], nullptr,
+		pThis->Damage, pThis->Warhead, 0, pThis->Bright))
+	{
+		pBullet->SetWeaponType(pThis);
+		pBullet->Limbo();
+		pBullet->SetLocation(coords);
+		pBullet->Explode(true);
+		pBullet->UnInit();
+		return true;
+	}
+
+	return false;
 }
 
 void WeaponTypeExt::DetonateAt(WeaponTypeClass* pThis, const CoordStruct& coords, TechnoClass* pOwner, int damage)

@@ -463,7 +463,7 @@ void ShieldClass::SelfHealing()
 
 	if (percentageAmount != 0)
 	{
-		if (this->HP < this->Type->Strength && timer->StartTime == -1)
+		if ((this->HP < this->Type->Strength || percentageAmount < 0) && timer->StartTime == -1)
 			timer->Start(rate);
 
 		if (this->HP > 0 && timer->Completed())
@@ -523,6 +523,7 @@ void ShieldClass::BreakShield(AnimTypeClass* pBreakAnim, WeaponTypeClass* pBreak
 		}
 	}
 
+	this->LastBreakFrame = Unsorted::CurrentFrame;
 	const auto pWeaponType = pBreakWeapon ? pBreakWeapon : this->Type->BreakWeapon.Get(nullptr);
 
 	if (pWeaponType)
@@ -613,7 +614,11 @@ void ShieldClass::KillAnim()
 {
 	if (this->IdleAnim)
 	{
-		GameDelete(this->IdleAnim);
+		// proper way to deal with this , deatch everything before deleting the object !
+		this->IdleAnim->RemainingIterations = 0;
+		//this->IdleAnim->UnInit();
+		//this->IdleAnim->AnnounceExpiredPointer();
+		//GameDelete(this->IdleAnim);
 		this->IdleAnim = nullptr;
 	}
 }
@@ -784,4 +789,9 @@ bool ShieldClass::IsAvailable()
 bool ShieldClass::IsBrokenAndNonRespawning()
 {
 	return this->HP <= 0 && !this->Type->Respawn;
+}
+
+int ShieldClass::GetFramesSinceLastBroken()
+{
+	return Unsorted::CurrentFrame - this->LastBreakFrame;
 }

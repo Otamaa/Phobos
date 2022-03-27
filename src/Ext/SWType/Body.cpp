@@ -6,25 +6,6 @@
 template<> const DWORD Extension<SuperWeaponTypeClass>::Canary = 0x11111111;
 SWTypeExt::ExtContainer SWTypeExt::ExtMap;
 
-// =============================
-// load / save
-
-template <typename T>
-void SWTypeExt::ExtData::Serialize(T& Stm) {
-	Stm
-		.Process(this->Money_Amount)
-		.Process(this->UIDescription)
-		.Process(this->CameoPriority)
-		.Process(this->LimboDelivery_Types)
-		.Process(this->LimboDelivery_IDs)
-		.Process(this->LimboDelivery_RandomWeightsData)
-		.Process(this->LimboDelivery_RollChances)
-		.Process(this->LimboKill_Affected)
-		.Process(this->LimboKill_IDs)
-		.Process(this->RandomBuffer)
-		;
-}
-
 void SWTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 	auto pThis = this->OwnerObject();
 	const char* pSection = pThis->ID;
@@ -60,6 +41,29 @@ void SWTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI) {
 
 	this->LimboKill_Affected.Read(exINI, pSection, "LimboKill.Affected");
 	this->LimboKill_IDs.Read(exINI, pSection, "LimboKill.IDs");
+
+	this->AnotherData.Read(exINI, pSection);
+}
+
+// =============================
+// load / save
+
+template <typename T>
+void SWTypeExt::ExtData::Serialize(T& Stm)
+{
+	Stm
+		.Process(this->Money_Amount)
+		.Process(this->UIDescription)
+		.Process(this->CameoPriority)
+		.Process(this->LimboDelivery_Types)
+		.Process(this->LimboDelivery_IDs)
+		.Process(this->LimboDelivery_RandomWeightsData)
+		.Process(this->LimboDelivery_RollChances)
+		.Process(this->LimboKill_Affected)
+		.Process(this->LimboKill_IDs)
+		.Process(this->RandomBuffer)
+		.Process(this->AnotherData)
+		;
 }
 
 void SWTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm) {

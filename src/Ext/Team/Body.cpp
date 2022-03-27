@@ -3,6 +3,7 @@
 template<> const DWORD Extension<TeamClass>::Canary = 0x414B4B41;
 TeamExt::ExtContainer TeamExt::ExtMap;
 
+void TeamExt::ExtData::InitializeConstants() { }
 // =============================
 // load / save
 
@@ -16,6 +17,13 @@ void TeamExt::ExtData::Serialize(T& Stm)
 		.Process(this->CloseEnough)
 		.Process(this->Countdown_RegroupAtLeader)
 		.Process(this->MoveMissionEndMode)
+		.Process(this->SelectedTarget)
+		.Process(this->ForceJump_Countdown)
+		.Process(this->ForceJump_InitialCountdown)
+		.Process(this->ForceJump_RepeatMode)
+		.Process(this->AngerNodeModifier)
+		.Process(this->OnlyTargetHouseEnemy)
+		.Process(this->OnlyTargetHouseEnemyMode)
 		.Process(this->WaitNoTargetCounter)
 		.Process(this->WaitNoTargetTimer)
 		.Process(this->TeamLeader)
@@ -34,6 +42,20 @@ void TeamExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 	this->Serialize(Stm);
 }
 
+void TeamExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) {}
+
+bool TeamExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool TeamExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
+
 // =============================
 // container
 
@@ -44,6 +66,8 @@ TeamExt::ExtContainer::~ExtContainer() = default;
 // container hooks
 
 //Everything InitEd beside the Vector below this address
+
+DEFINE_HOOK_AGAIN(0x6E8B2C, TeamClass_CTOR, 0xC)
 DEFINE_HOOK(0x6E8B46, TeamClass_CTOR, 0x7)
 {
 	GET(TeamClass*, pThis, ESI);

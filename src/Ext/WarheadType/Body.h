@@ -6,6 +6,8 @@
 #include <Utilities/TemplateDef.h>
 #include <New/Type/ShieldTypeClass.h>
 
+#include <Misc/Otamaa/Ext/WarheadType/Body.h>
+
 class WarheadTypeExt
 {
 public:
@@ -72,6 +74,23 @@ public:
 		Valueable<bool> Shield_InheritStateOnReplace;
 		ValueableVector<ShieldTypeClass*> Shield_AffectTypes;
 
+		Valueable<int> Shield_MinimumReplaceDelay;
+
+		Valueable<bool> Transact;
+		Valueable<int> Transact_Experience_Value;
+		Valueable<int> Transact_Experience_Source_Flat;
+		Valueable<double> Transact_Experience_Source_Percent;
+		Valueable<bool> Transact_Experience_Source_Percent_CalcFromTarget;
+		Valueable<int> Transact_Experience_Target_Flat;
+		Valueable<double> Transact_Experience_Target_Percent;
+		Valueable<bool> Transact_Experience_Target_Percent_CalcFromSource;
+		Valueable<bool> Transact_SpreadAmongTargets;
+
+		Valueable<bool> ShakeIsLocal;
+
+		Otamaa::WHExt::ExtData  AnotherData;
+
+
 	private:
 		Valueable<double> Shield_Respawn_Rate_InMinutes;
 		Valueable<double> Shield_SelfHealing_Rate_InMinutes;
@@ -112,7 +131,7 @@ public:
 			, Shield_BreakWeapon {}
 			, Shield_AbsorbPercent {}
 			, Shield_PassPercent {}
-
+			, Shield_MinimumReplaceDelay { 0 }
 			, Shield_Respawn_Duration { 0 }
 			, Shield_Respawn_Amount { 0.0 }
 			, Shield_Respawn_Rate { -1 }
@@ -131,15 +150,38 @@ public:
 			, Shield_AffectTypes {}
 
 			, NotHuman_DeathSequence { -1 }
+
+
+			, Transact { false }
+			, Transact_Experience_Value { 1 }
+			, Transact_Experience_Source_Flat { 0 }
+			, Transact_Experience_Source_Percent { 0.0 }
+			, Transact_Experience_Source_Percent_CalcFromTarget { false }
+			, Transact_Experience_Target_Flat { 0 }
+			, Transact_Experience_Target_Percent { 0.0 }
+			, Transact_Experience_Target_Percent_CalcFromSource { false }
+			, Transact_SpreadAmongTargets { false }
+
+			, ShakeIsLocal { false }
+
+			, AnotherData { }
 		{ }
 
 	private:
 		void DetonateOnOneUnit(HouseClass* pHouse, TechnoClass* pTarget, TechnoClass* pOwner = nullptr);
+		void DetonateOnCell(HouseClass* pHouse, CellClass* pTarget, TechnoClass* pOwner = nullptr);
 
 		void ApplyRemoveDisguiseToInf(HouseClass* pHouse, TechnoClass* pTarget);
 		void ApplyRemoveMindControl(HouseClass* pHouse, TechnoClass* pTarget);
-		void ApplyCrit(HouseClass* pHouse, TechnoClass* pTarget, TechnoClass* Owner);
+		void ApplyCrit(HouseClass* pHouse, AbstractClass* pTarget, TechnoClass* Owner);
 		void ApplyShieldModifiers(TechnoClass* pTarget);
+
+		void DetonateOnAllUnits(HouseClass* pHouse, const CoordStruct coords, const float cellSpread, TechnoClass* pOwner);
+		void TransactOnOneUnit(TechnoClass* pTarget, TechnoClass* pOwner, int targets);
+		void TransactOnAllUnits(HouseClass* pHouse, const CoordStruct coords, const float cellSpread, TechnoClass* pOwner);
+		int TransactGetValue(TechnoClass* pTarget, TechnoClass* pOwner, int flat, double percent, boolean calcFromTarget, int targetValue, int ownerValue);
+		std::vector<std::vector<int>> TransactGetSourceAndTarget(TechnoClass* pTarget, TechnoTypeClass* pTargetType, TechnoClass* pOwner, TechnoTypeClass* pOwnerType, int targets);
+		int TransactOneValue(TechnoClass* pTechno, TechnoTypeClass* pTechnoType, int transactValue, TransactValueType valueType);
 
 	public:
 		void Detonate(TechnoClass* pOwner, HouseClass* pHouse, BulletClass* pBullet, CoordStruct coords);
@@ -149,8 +191,10 @@ public:
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
+		virtual void Initialize() override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
 
+		virtual size_t Size() const { return sizeof(*this); }
 	private:
 		template <typename T>
 		void Serialize(T& Stm);
@@ -166,9 +210,11 @@ public:
 	};
 
 	static ExtContainer ExtMap;
+	static WarheadTypeClass* Temporal_WH;
 	static bool LoadGlobals(PhobosStreamReader& Stm);
 	static bool SaveGlobals(PhobosStreamWriter& Stm);
 
 	static void DetonateAt(WarheadTypeClass* pThis, ObjectClass* pTarget, TechnoClass* pOwner, int damage);
 	static void DetonateAt(WarheadTypeClass* pThis, const CoordStruct& coords, TechnoClass* pOwner, int damage);
+
 };

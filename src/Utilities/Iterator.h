@@ -46,6 +46,7 @@ public:
 	Iterator(const std::vector<T>& vec) : items(vec.data()), count(vec.size()) {}
 	Iterator(const VectorClass<T>& vec) : items(vec.Items), count(static_cast<size_t>(vec.Capacity)) {}
 	Iterator(const DynamicVectorClass<T>& vec) : items(vec.Items), count(static_cast<size_t>(vec.Count)) {}
+	Iterator(const TypeList<T>& vec) : items(vec.Items) , count(static_cast<size_t>(vec.Count)) {}
 
 	T at(size_t index) const {
 		return this->items[index];
@@ -121,7 +122,12 @@ Iterator<T> make_iterator(const VectorClass<T>& value) {
 }
 
 template <typename T>
-Iterator<T> make_iterator(const DynamicVectorClass<T>& value) {
+Iterator<T> make_iterator(const DynamicVectorClass<T> &value) {
+	return Iterator<T>(value);
+}
+
+template <typename T>
+Iterator<T> make_iterator(const TypeList<T>& value){
 	return Iterator<T>(value);
 }
 

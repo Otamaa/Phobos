@@ -25,9 +25,24 @@ public:
 		std::map<int, CellStruct> Waypoints;
 		std::map<int, ExtendedVariable> Variables[2]; // 0 for local, 1 for global
 
+		LightingStruct DefaultNormalLighting;
+		int DefaultAmbientOriginal;
+		int DefaultAmbientCurrent;
+		int DefaultAmbientTarget;
+		TintStruct CurrentTint_Tiles;
+		TintStruct CurrentTint_Schemes;
+		TintStruct CurrentTint_Hashes;
+
 		ExtData(ScenarioClass* OwnerObject) : Extension<ScenarioClass>(OwnerObject)
 			, Waypoints { }
 			, Variables { }
+			, DefaultNormalLighting { {1000,1000,1000},0,0 }
+			, DefaultAmbientOriginal { 0 }
+			, DefaultAmbientCurrent { 0 }
+			, DefaultAmbientTarget { 0 }
+			, CurrentTint_Tiles { -1,-1,-1 }
+			, CurrentTint_Schemes { -1,-1,-1 }
+			, CurrentTint_Hashes { -1,-1,-1 }
 		{ }
 
 		void SetVariableToByID(bool bIsGlobal, int nIndex, char bState);
@@ -35,7 +50,7 @@ public:
 		void ReadVariables(bool bIsGlobal, CCINIClass* pINI);
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 

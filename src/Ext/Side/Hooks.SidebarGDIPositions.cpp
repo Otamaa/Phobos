@@ -26,7 +26,7 @@ DEFINE_HOOK(0x652EAB, SidebarGDIPositions2, 0x6)
 
 DEFINE_HOOK(0x6A51E9, SidebarGDIPositions3, 0x6)
 {
-	DWORD& SidebarClass__OBJECT_HEIGHT = *reinterpret_cast<DWORD*>(0xB0B500);
+	DWORD& SidebarClass__OBJECT_HEIGHT = Make_Global<DWORD>(0xB0B500);
 	SidebarClass__OBJECT_HEIGHT = 0x32;
 
 	bool pos = SideExt::isNODSidebar();

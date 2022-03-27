@@ -10,37 +10,39 @@
 template<> const DWORD Extension<HouseClass>::Canary = 0x11111111;
 HouseExt::ExtContainer HouseExt::ExtMap;
 
+void HouseExt::ExtData::InitializeConstants() { }
 
 int HouseExt::ActiveHarvesterCount(HouseClass* pThis)
 {
-	if (!pThis) return 0;
+	if (!pThis || !pThis->IsPlayer()) return 0;
 
-	int result = 0;
-	for (auto techno : *TechnoClass::Array) {
-		if (auto pTechnoExt = TechnoTypeExt::ExtMap.Find(techno->GetTechnoType())) {
-			if (pTechnoExt->IsCountedAsHarvester() && techno->Owner == pThis) {
-				if (auto pTechno = TechnoExt::ExtMap.Find(techno)) {
-					result += TechnoExt::IsHarvesting(techno);
-				}
-			}
-		}
-	}
+	auto const pTechArr = TechnoClass::Array();
+	int result = std::count_if(pTechArr->begin(), pTechArr->end(), [pThis](TechnoClass* techno)
+	{
+		if (auto pTechnoExt = TechnoTypeExt::ExtMap.Find(techno->GetTechnoType()))
+			if (pTechnoExt->IsCountedAsHarvester() && techno->Owner == pThis)
+					return TechnoExt::IsHarvesting(techno);
+
+		return false;
+	});
 
 	return result;
 }
 
 int HouseExt::TotalHarvesterCount(HouseClass* pThis)
 {
-	if (!pThis)	return 0;
+	if (!pThis || !pThis->IsPlayer())	return 0;
 
 	int result = 0;
-	for (auto techno : *TechnoTypeClass::Array) {
-		if (auto pTechnoExt = TechnoTypeExt::ExtMap.Find(techno)) {
-			if (pTechnoExt->IsCountedAsHarvester()) {
+	auto const pTechArr = TechnoTypeClass::Array();
+	std::for_each(pTechArr->begin(), pTechArr->end(), [&result,pThis](TechnoTypeClass* techno)
+	{
+		if (auto const pTechnoExt = TechnoTypeExt::ExtMap.Find(techno))	{
+			if (pTechnoExt->IsCountedAsHarvester())	{
 				result += pThis->CountOwnedAndPresent(techno);
 			}
 		}
-	}
+	});
 
 	return result;
 }
@@ -119,8 +121,7 @@ bool HouseExt::SaveGlobals(PhobosStreamWriter& Stm)
 // =============================
 // container
 
-HouseExt::ExtContainer::ExtContainer() : Container("HouseClass") {
-}
+HouseExt::ExtContainer::ExtContainer() : Container("HouseClass") {}
 
 HouseExt::ExtContainer::~ExtContainer() = default;
 

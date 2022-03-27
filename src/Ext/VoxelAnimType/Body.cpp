@@ -3,14 +3,18 @@
 
 template<> const DWORD Extension<VoxelAnimTypeClass>::Canary = 0xAAAEEEEE;
 VoxelAnimTypeExt::ExtContainer VoxelAnimTypeExt::ExtMap;
-void VoxelAnimTypeExt::ExtData::Initialize() {}
+void VoxelAnimTypeExt::ExtData::InitializeConstants(){}
 
 void VoxelAnimTypeExt::ExtData::LoadFromINIFile(CCINIClass* pINI)
 {
 	const char* pID = this->OwnerObject()->ID;
 	INI_EX exINI(pINI);
 
+	if (!pINI->GetSection(pID))
+		return;
+
 	this->LaserTrail_Types.Read(exINI, pID, "LaserTrail.Types");
+	this->AnotherData.Read_Rules(exINI, pID);
 }
 
 // =============================
@@ -20,6 +24,7 @@ void VoxelAnimTypeExt::ExtData::Serialize(T& Stm)
 {
 	Stm
 		.Process(LaserTrail_Types)
+		.Process(AnotherData)
 		;
 }
 

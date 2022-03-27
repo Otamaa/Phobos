@@ -19,7 +19,10 @@ void AnimTypeExt::ExtData::LoadFromINIFile(CCINIClass* pINI)
 
 	INI_EX exINI(pINI);
 
-	this->Palette.LoadFromINI(pINI, pID, "CustomPalette");
+	if (!pINI->GetSection(pID))
+		return;
+
+	this->Palette.Read(pINI, pID, "CustomPalette");
 	this->CreateUnit.Read(exINI, pID, "CreateUnit",true);
 	this->CreateUnit_Facing.Read(exINI, pID, "CreateUnit.Facing");
 	this->CreateUnit_InheritDeathFacings.Read(exINI, pID, "CreateUnit.InheritFacings");
@@ -33,6 +36,13 @@ void AnimTypeExt::ExtData::LoadFromINIFile(CCINIClass* pINI)
 	this->HideIfNoOre_Threshold.Read(exINI, pID, "HideIfNoOre.Threshold");
 	this->Layer_UseObjectLayer.Read(exINI, pID, "Layer.UseObjectLayer");
 	this->UseCenterCoordsIfAttached.Read(exINI, pID, "UseCenterCoordsIfAttached");
+
+	this->AnotherData.Read(exINI, pID);
+
+	this->DamageDelay.Read(exINI, pID, "Damage.Delay");
+
+	//if (this->DamageDelay > 0)
+	//	Debug::Log("Anim[%s] Has [%d] Damage Delay ! \n", pID, DamageDelay);
 }
 
 const void AnimTypeExt::ProcessDestroyAnims(UnitClass* pThis, TechnoClass* pKiller)
@@ -45,39 +55,33 @@ const void AnimTypeExt::ProcessDestroyAnims(UnitClass* pThis, TechnoClass* pKill
 	if (pThis->Type->DestroyAnim.Count > 0)
 	{
 		auto const facing = pThis->PrimaryFacing.current().value256();
-		AnimTypeClass* pAnimType = nullptr;
 		auto const pTypeExt = TechnoTypeExt::ExtMap.Find(pThis->Type);
+		int idxAnim = 0;
 
 		if (!pTypeExt->DestroyAnim_Random.Get())
 		{
-			int idxAnim = 0;
-
 			if (pThis->Type->DestroyAnim.Count >= 8)
 			{
 				idxAnim = pThis->Type->DestroyAnim.Count;
 				if (pThis->Type->DestroyAnim.Count % 2 == 0)
 					idxAnim *= static_cast<int>(facing / 256.0);
 			}
-
-			pAnimType = pThis->Type->DestroyAnim[idxAnim];
 		}
 		else
 		{
-			int const nIDx_Rand = pThis->Type->DestroyAnim.Count == 1 ?
-				0 : ScenarioClass::Instance->Random.RandomRanged(0, (pThis->Type->DestroyAnim.Count - 1));
-			pAnimType = pThis->Type->DestroyAnim[nIDx_Rand];
-
+			if (pThis->Type->DestroyAnim.Count > 1)
+			idxAnim = ScenarioClass::Instance->Random.RandomRanged(0, (pThis->Type->DestroyAnim.Count - 1));
 		}
 
-		if (pAnimType)
+		if (AnimTypeClass* pAnimType = pThis->Type->DestroyAnim[idxAnim])
 		{
 			if (auto const pAnim = GameCreate<AnimClass>(pAnimType, pThis->GetCoords()))
 			{
-				//auto VictimOwner = pThis->IsMindControlled() && pThis->GetOriginalOwner()
-				//	? pThis->GetOriginalOwner() : pThis->Owner;
-
 				auto const pAnimTypeExt = AnimTypeExt::ExtMap.Find(pAnim->Type);
 				auto const pAnimExt = AnimExt::ExtMap.Find(pAnim);
+
+				if (!pAnimTypeExt || !pAnimExt)
+					return;
 
 				AnimExt::SetAnimOwnerHouseKind(pAnim, pInvoker, pThis->Owner);
 
@@ -117,6 +121,8 @@ void AnimTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->HideIfNoOre_Threshold)
 		.Process(this->Layer_UseObjectLayer)
 		.Process(this->UseCenterCoordsIfAttached)
+
+		.Process(this->AnotherData)
 		;
 }
 
@@ -132,6 +138,20 @@ void AnimTypeExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 	this->Serialize(Stm);
 }
 
+bool AnimTypeExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool AnimTypeExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
+
+void AnimTypeExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) {}
+
 AnimTypeExt::ExtContainer::ExtContainer() : Container("AnimTypeClass") { }
 AnimTypeExt::ExtContainer::~ExtContainer() = default;
 
@@ -146,6 +166,9 @@ DEFINE_HOOK(0x42784B, AnimTypeClass_CTOR, 0x5)
 DEFINE_HOOK(0x428EA8, AnimTypeClass_SDDTOR, 0x5)
 {
 	GET(AnimTypeClass*, pItem, ECX);
+
+	if (auto pExt = AnimTypeExt::ExtMap.Find(pItem))
+		pExt->AnotherData.CleanUp();
 
 	AnimTypeExt::ExtMap.Remove(pItem);
 	return 0;
@@ -169,7 +192,7 @@ DEFINE_HOOK(0x428958, AnimTypeClass_Load_Suffix, 0x6)
 	return 0;
 }
 
-DEFINE_HOOK(0x42898A, AnimTypeClass_Save_Suffix, 0x3)
+DEFINE_HOOK(0x42898A, AnimTypeClass_Save_Suffix, 0x5 ) // was 3
 {
 	AnimTypeExt::ExtMap.SaveStatic();
 	return 0;

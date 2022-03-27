@@ -12,13 +12,14 @@ void VoxelAnimExt::InitializeLaserTrails(VoxelAnimClass* pThis)
 
 	if (pThisExt->LaserTrails.size())
 		return;
-	
+	auto const pOwner = pThis->OwnerHouse ? pThis->OwnerHouse : HouseClass::FindCivilianSide();
+
 	for (auto const& idxTrail : pTypeExt->LaserTrail_Types)
 	{
 		if (auto const pLaserType = LaserTrailTypeClass::Array[idxTrail].get())
 		{
 			pThisExt->LaserTrails.push_back(std::make_unique<LaserTrailClass>
-				(pLaserType, pThis->OwnerHouse));
+				(pLaserType, pOwner->LaserColor));
 		}
 	}
 }
@@ -32,6 +33,7 @@ void VoxelAnimExt::ExtData::Serialize(T& Stm)
 {
 	Stm
 		.Process(LaserTrails)
+		.Process(AnotherData)
 		;
 }
 
@@ -77,6 +79,7 @@ DEFINE_HOOK(0x74942E, VoxelAnimClass_CTOR, 0xC)
 
 	VoxelAnimExt::ExtMap.FindOrAllocate(pItem);
 	VoxelAnimExt::InitializeLaserTrails(pItem);
+	//TrailsManager::Construct(pItem);
 
 	return 0;
 }

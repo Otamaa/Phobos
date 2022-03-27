@@ -10,6 +10,10 @@ AnimExt::ExtContainer AnimExt::ExtMap;
 const bool AnimExt::SetAnimOwnerHouseKind(AnimClass* pAnim, HouseClass* pInvoker, HouseClass* pVictim, bool defaultToVictimOwner)
 {
 	auto const pTypeExt = AnimTypeExt::ExtMap.Find(pAnim->Type);
+
+	if (!pTypeExt)
+		return false;
+
 	auto newOwner = HouseExt::GetHouseKind(pTypeExt->CreateUnit_Owner.Get(), true, defaultToVictimOwner ? pVictim : nullptr, pInvoker, pVictim);
 
 	if (newOwner)
@@ -47,6 +51,20 @@ void AnimExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 {
 	Extension<AnimClass>::SaveToStream(Stm);
 	this->Serialize(Stm);
+}
+
+void AnimExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
+
+bool AnimExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool AnimExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
 }
 
 // =============================

@@ -8,33 +8,50 @@
 #include <SuperClass.h>
 #include <Ext/SWType/Body.h>
 #include <Utilities/SavegameDef.h>
-
 #include <Ext/Scenario/Body.h>
 
-//Static init
-template<> const DWORD Extension<TActionClass>::Canary = 0x91919191;
+#include <Misc/Otamaa/Ext/Terrain/Body.h>
+
+#include <TagClass.h>
+
+template<> const DWORD Extension<TActionExt::base_type>::Canary = 0x87154321;
 TActionExt::ExtContainer TActionExt::ExtMap;
-
-// =============================
-// load / save
-
-template <typename T>
-void TActionExt::ExtData::Serialize(T& Stm)
-{
-	//Stm;
-}
 
 void TActionExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
 {
-	Extension<TActionClass>::LoadFromStream(Stm);
-	this->Serialize(Stm);
+	Extension<TActionExt::base_type>::LoadFromStream(Stm);
+	Stm
+		;
 }
 
 void TActionExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 {
-	Extension<TActionClass>::SaveToStream(Stm);
-	this->Serialize(Stm);
+	Extension<TActionExt::base_type>::SaveToStream(Stm);
+	Stm
+		;
 }
+
+void TActionExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
+
+bool TActionExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool TActionExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
+}
+
+// =============================
+// container
+
+TActionExt::ExtContainer::ExtContainer() : Container("TActionClass") { };
+TActionExt::ExtContainer::~ExtContainer() = default;
+
+//
 
 bool TActionExt::Execute(TActionClass* pThis, HouseClass* pHouse, ObjectClass* pObject,
 	TriggerClass* pTrigger, CellStruct const& location, bool& bHandled)
@@ -63,6 +80,8 @@ bool TActionExt::Execute(TActionClass* pThis, HouseClass* pHouse, ObjectClass* p
 		return TActionExt::PrintVariableValue(pThis, pHouse, pObject, pTrigger, location);
 	case PhobosTriggerAction::BinaryOperation:
 		return TActionExt::BinaryOperation(pThis, pHouse, pObject, pTrigger, location);
+	case PhobosTriggerAction::AdjustLighting:
+		return TActionExt::AdjustLighting(pThis, pHouse, pObject, pTrigger, location);
 	case PhobosTriggerAction::RunSuperWeaponAtLocation:
 		return TActionExt::RunSuperWeaponAtLocation(pThis, pHouse, pObject, pTrigger, location);
 	case PhobosTriggerAction::RunSuperWeaponAtWaypoint:
@@ -261,12 +280,101 @@ bool TActionExt::BinaryOperation(TActionClass* pThis, HouseClass* pHouse, Object
 	return true;
 }
 
+void TActionExt::RecreateLightSources()
+{
+	for (auto pBld : *BuildingClass::Array)
+	{
+		if (pBld->LightSource)
+		{
+			GameDelete(pBld->LightSource);
+			if (pBld->Type->LightIntensity)
+			{
+				TintStruct color { pBld->Type->LightRedTint, pBld->Type->LightGreenTint, pBld->Type->LightBlueTint };
+
+				pBld->LightSource = GameCreate<LightSourceClass>(pBld->GetCoords(),
+					pBld->Type->LightVisibility, pBld->Type->LightIntensity, color);
+
+				pBld->LightSource->Activate();
+			}
+		}
+	}
+
+	for (auto pRadSite : *RadSiteClass::Array_Constant)
+	{
+		if (pRadSite && pRadSite->LightSource)
+		{
+			auto coord = pRadSite->LightSource->Location;
+			auto color = pRadSite->LightSource->LightTint;
+			auto intensity = pRadSite->LightSource->LightIntensity;
+			auto visibility = pRadSite->LightSource->LightVisibility;
+
+			GameDelete(pRadSite->LightSource);
+
+			pRadSite->LightSource = GameCreate<LightSourceClass>(coord,
+				visibility, intensity, color);
+
+			pRadSite->LightSource->Activate();
+		}
+	}
+
+	for (auto pTerrain : *TerrainClass::Array)
+	{
+		if (auto const& pExt = TerrainExt::ExtMap.Find(pTerrain))
+		{
+			pExt->ClearLightSource();
+			pExt->InitializeLightSource();
+		}
+	}
+}
+
+bool TActionExt::AdjustLighting(TActionClass* pThis, HouseClass* pHouse, ObjectClass* pObject, TriggerClass* pTrigger, CellStruct const& location)
+{
+	if (pThis->Param3 != -1)
+		ScenarioClass::Instance->NormalLighting.Tint.Red = pThis->Param3;
+	if (pThis->Param4 != -1)
+		ScenarioClass::Instance->NormalLighting.Tint.Green = pThis->Param4;
+	if (pThis->Param5 != -1)
+		ScenarioClass::Instance->NormalLighting.Tint.Blue = pThis->Param5;
+
+	const int r = ScenarioClass::Instance->NormalLighting.Tint.Red * 10;
+	const int g = ScenarioClass::Instance->NormalLighting.Tint.Green * 10;
+	const int b = ScenarioClass::Instance->NormalLighting.Tint.Blue * 10;
+
+	if (pThis->Value & 0b001) // Update Tiles
+	{
+		for (auto& pLightConvert : *LightConvertClass::Array)
+			pLightConvert->UpdateColors(r, g, b, false);
+		ScenarioExt::Global()->CurrentTint_Tiles = ScenarioClass::Instance->NormalLighting.Tint;
+	}
+
+	if (pThis->Value & 0b010) // Update Units & Buildings
+	{
+		for (auto& pScheme : *ColorScheme::Array)
+			pScheme->LightConvert->UpdateColors(r, g, b, false);
+		ScenarioExt::Global()->CurrentTint_Schemes = ScenarioClass::Instance->NormalLighting.Tint;
+	}
+
+	if (pThis->Value & 0b100) // Update CustomPalettes (vanilla YR LightConvertClass one, not the Ares ConvertClass only one)
+	{
+		ScenarioClass::UpdateHashPalLighting(r, g, b, false);
+		ScenarioExt::Global()->CurrentTint_Hashes = ScenarioClass::Instance->NormalLighting.Tint;
+	}
+
+	ScenarioClass::UpdateCellLighting();
+	MapClass::Instance->RedrawSidebar(1); // GScreenClass::Flag_To_Redraw
+
+	// #issue 429
+	TActionExt::RecreateLightSources();
+
+	return true;
+}
+
 bool TActionExt::RunSuperWeaponAtLocation(TActionClass* pThis, HouseClass* pHouse, ObjectClass* pObject, TriggerClass* pTrigger, CellStruct const& location)
 {
 	if (!pThis)
 		return true;
 
-	TActionExt::RunSuperWeaponAt(pThis, pThis->Param5, pThis->Param6);
+	TActionExt::RunSuperWeaponAt(pThis, (short)pThis->Param5, (short)pThis->Param6);
 
 	return true;
 }
@@ -289,24 +397,26 @@ bool TActionExt::RunSuperWeaponAtWaypoint(TActionClass* pThis, HouseClass* pHous
 	return true;
 }
 
-bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, int X, int Y)
+bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, short X, short Y)
 {
 	if (SuperWeaponTypeClass::Array->Count > 0)
 	{
+
 		int swIdx = pThis->Param3;
 		int houseIdx = -1;
 		std::vector<int> housesListIdx;
-		CellStruct targetLocation = { (short)X, (short)Y };
+		CellStruct targetLocation =  { X,Y } ;
 
 		do
 		{
 			if (X < 0)
-				targetLocation.X = (short)ScenarioClass::Instance->Random.RandomRanged(0, MapClass::Instance->MapCoordBounds.Right);
+				targetLocation.X = (short)ScenarioClass::Instance->Random(0, MapClass::Instance->MapCoordBounds.Right);
 
 			if (Y < 0)
-				targetLocation.Y = (short)ScenarioClass::Instance->Random.RandomRanged(0, MapClass::Instance->MapCoordBounds.Bottom);
-		} while (!MapClass::Instance->IsWithinUsableArea(targetLocation, false));
-		
+				targetLocation.Y = (short)ScenarioClass::Instance->Random(0, MapClass::Instance->MapCoordBounds.Bottom);
+		}
+		while (!MapClass::Instance->IsWithinUsableArea(targetLocation, false));
+
 		// Only valid House indexes
 		if ((pThis->Param4 >= HouseClass::Array->Count
 			&& pThis->Param4 < HouseClass::PlayerAtA)
@@ -361,8 +471,8 @@ bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, int X, int Y)
 				}
 			}
 
-			if (housesListIdx.size() > 0)
-				houseIdx = housesListIdx.at(ScenarioClass::Instance->Random.RandomRanged(0, housesListIdx.size() - 1));
+			if (!housesListIdx.empty())
+				houseIdx = ScenarioClass::Instance->Random(0, housesListIdx.size() - 1);
 			else
 				return true;
 
@@ -396,8 +506,8 @@ bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, int X, int Y)
 				}
 			}
 
-			if (housesListIdx.size() > 0)
-				houseIdx = housesListIdx.at(ScenarioClass::Instance->Random.RandomRanged(0, housesListIdx.size() - 1));
+			if (!housesListIdx.empty())
+				houseIdx = ScenarioClass::Instance->Random(0, housesListIdx.size() - 1);
 			else
 				return true;
 
@@ -414,12 +524,13 @@ bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, int X, int Y)
 
 		HouseClass* pHouse = HouseClass::Array->GetItem(houseIdx);
 		SuperWeaponTypeClass* pSuperType = SuperWeaponTypeClass::Array->GetItem(swIdx);
-		SuperClass* pSuper = GameCreate<SuperClass>(pSuperType, pHouse);
-
-		if (auto const pSWExt = SWTypeExt::ExtMap.Find(pSuperType))
+		if (SuperClass* pSuper = GameCreate<SuperClass>(pSuperType, pHouse))
 		{
-			pSuper->SetReadiness(true);
-			pSuper->Launch(targetLocation, false);
+			if (auto const pSWExt = SWTypeExt::ExtMap.Find(pSuperType))
+			{
+				pSuper->SetReadiness(true);
+				pSuper->Launch(targetLocation, false);
+			}
 		}
 	}
 
@@ -427,20 +538,11 @@ bool TActionExt::RunSuperWeaponAt(TActionClass* pThis, int X, int Y)
 }
 
 // =============================
-// container
-
-TActionExt::ExtContainer::ExtContainer() : Container("TActionClass") { }
-
-TActionExt::ExtContainer::~ExtContainer() = default;
-
-// =============================
 // container hooks
-
 #ifdef MAKE_GAME_SLOWER_FOR_NO_REASON
 DEFINE_HOOK(0x6DD176, TActionClass_CTOR, 0x5)
 {
 	GET(TActionClass*, pItem, ESI);
-
 	TActionExt::ExtMap.FindOrAllocate(pItem);
 	return 0;
 }
@@ -448,7 +550,6 @@ DEFINE_HOOK(0x6DD176, TActionClass_CTOR, 0x5)
 DEFINE_HOOK(0x6E4761, TActionClass_SDDTOR, 0x6)
 {
 	GET(TActionClass*, pItem, ESI);
-
 	TActionExt::ExtMap.Remove(pItem);
 	return 0;
 }

@@ -6,6 +6,8 @@
 #include <Utilities/TemplateDef.h>
 #include <Utilities/Macro.h>
 
+#include <Misc/Otamaa/Ext/TerrainType/Body.h>
+
 class TerrainTypeExt
 {
 public:
@@ -20,7 +22,9 @@ public:
 		Valueable<Point2D> SpawnsTiberium_CellsPerAnim;
 		Nullable<AnimTypeClass*> DestroyAnim;
 		NullableIdx<VocClass> DestroySound;
+		Nullable<ColorStruct> MinimapColor;
 
+		Otamaa::TeTExt::ExtData   AnotherData;
 		ExtData(TerrainTypeClass* OwnerObject) : Extension<TerrainTypeClass>(OwnerObject)
 			, SpawnsTiberium_Type { 0 }
 			, SpawnsTiberium_Range { 1 }
@@ -28,6 +32,8 @@ public:
 			, SpawnsTiberium_CellsPerAnim { { 1, 0 } }
 			, DestroyAnim {}
 			, DestroySound {}
+			, MinimapColor {}
+			, AnotherData { }
 		{ }
 
 		virtual ~ExtData() = default;
@@ -38,7 +44,7 @@ public:
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		int GetTiberiumGrowthStage();
 		int GetCellsPerAnim();
 

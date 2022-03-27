@@ -6,6 +6,9 @@
 #include <Utilities/Enum.h>
 #include <Utilities/Constructs.h>
 #include <Utilities/Template.h>
+
+#include <Misc/Otamaa/Ext/AnimType/Body.h>
+
 class AnimTypeExt
 {
 public:
@@ -29,6 +32,9 @@ public:
 		Nullable<bool> Layer_UseObjectLayer;
 		Valueable<bool> UseCenterCoordsIfAttached;
 
+		Otamaa::ATExt::ExtData AnotherData;
+
+		Valueable<int> DamageDelay;
 		ExtData(AnimTypeClass* OwnerObject) : Extension<AnimTypeClass>(OwnerObject)
 			, Palette { CustomPalette::PaletteMode::Temperate }
 			, CreateUnit_Facing { 0 }
@@ -43,14 +49,17 @@ public:
 			, HideIfNoOre_Threshold { 0 }
 			, Layer_UseObjectLayer {}
 			, UseCenterCoordsIfAttached { false }
+			, AnotherData { }
+			, DamageDelay { 0 }
 		{ }
 
 		virtual ~ExtData() = default;
 
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
+		virtual void InitializeConstants() override { }
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
 
@@ -64,9 +73,12 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
 
 	static const void ProcessDestroyAnims(UnitClass* pThis, TechnoClass* pKiller = nullptr);
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 };

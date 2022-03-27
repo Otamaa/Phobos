@@ -4,6 +4,9 @@ template<> const DWORD Extension<SidebarClass>::Canary = 0x51DEBA12;
 std::unique_ptr<SidebarExt::ExtData> SidebarExt::Data = nullptr;
 
 SHPStruct* SidebarExt::TabProducingProgress[4];
+SHPStruct* SidebarExt::SidesMouseShape;
+
+void SidebarExt::ExtData::InitializeConstants() { }
 
 void SidebarExt::Allocate(SidebarClass* pThis)
 {

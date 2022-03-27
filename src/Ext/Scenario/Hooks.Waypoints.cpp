@@ -36,7 +36,9 @@ DEFINE_HOOK(0x68BD08, ScenarioClass_Get_Waypoint, 0x7)
 
 DEFINE_HOOK(0x68BD60, ScenarioClass_Clear_All_Waypoints, 0x6)
 {
-	ScenarioExt::Global()->Waypoints.clear();
+	if (auto const pScen = ScenarioExt::Global())
+		if (!pScen->Waypoints.empty())
+			pScen->Waypoints.clear();
 
 	return 0x68BD79;
 }

@@ -55,13 +55,70 @@ class ConvertClass;
 template <typename T>
 using UniqueGamePtr = std::unique_ptr<T, GameDeleter>;
 
+template <typename T>
+using UniqueDLLPtr = std::unique_ptr<T, DLLDeleter>;
+
+struct RadialFire
+{
+private:
+	int burst;
+	double degrees;
+	int delta;
+	float deltaZ;
+public:
+	RadialFire() = default;
+	explicit RadialFire(DirStruct& nDir , int Burst ,int SplitAngle ) noexcept :
+		burst(Burst)
+	{
+		degrees = Math::rad2deg(nDir.radians()) + SplitAngle;
+		delta = SplitAngle / (Burst + 1);
+		deltaZ = 1.0f / (burst / 2.0f + 1);
+	}
+
+	BulletVelocity GetBulletVel(int index) const
+	{
+		int z = 0;
+		float temp = burst / 2.0f;
+		if (index - temp < 0)
+			z = index;
+		else
+			z = abs(index - burst + 1);
+
+		double angle = degrees + delta * (index + 1);
+		DirStruct targetDir = DirStruct(Math::deg2rad(angle));
+		Matrix3D matrix3D = Matrix3D(true);
+		matrix3D.RotateZ((float)targetDir.radians());
+		matrix3D.Translate(1, 0, 0);
+		auto offset = Matrix3D::MatrixMultiply(matrix3D, Vector3D<float>::Empty);
+		return BulletVelocity { offset.X, -offset.Y, deltaZ * z };
+	}
+};
+
 struct Leptons {
 	Leptons() = default;
 	explicit Leptons(int value) noexcept : value(value) {}
+	explicit Leptons(double velue) noexcept : value(Game::F2I(velue * 256.0)){}
 
-	operator int() const {
-		return this->value;
+	operator int() const
+	{ return this->value; }
+
+	unsigned long ToLong() const
+	{ return static_cast<std::make_unsigned<long>::type> (this->value); }
+
+	double ToDouble() const
+	{ return static_cast<double>(this->value / 256.0); }
+
+	int ToCell() const
+	{
+		if (this->value >= (256 / 2))
+		{
+			return (this->value / 256) + 1;
+		}
+		return (this->value / 256);
 	}
+
+	int ToPixel()
+	{ return (((int)(signed short)this->value * 48) + (256 / 2) - ((this->value < 0) ? (256 - 1) : 0)) / 256; }
 
 	int value{ 0 };
 };
@@ -84,12 +141,18 @@ public:
 		return this->Convert.get();
 	}
 
-	bool LoadFromINI(
+	ConvertClass* GetOrDefaultConvert(ConvertClass* pDefault) const {
+		return this->Convert.get() ? this->Convert.get() : pDefault;
+	}
+
+	bool Read(
 		CCINIClass* pINI, const char* pSection, const char* pKey,
 		const char* pDefault = "");
-
+	bool LoadFromName(const char* PaletteName);
 	bool Load(PhobosStreamReader& Stm, bool RegisterForChange);
 	bool Save(PhobosStreamWriter& Stm) const;
+
+	bool CreateFromBytePalette(BytePalette nBytePal);
 
 private:
 	void Clear();
@@ -257,6 +320,15 @@ public:
 		}
 
 		return true;
+	}
+
+	//not sure if these correct ?
+	auto begin() const {
+		return this->values.begin();
+	}
+
+	auto end() const {
+		return  this->values.end();
 	}
 
 private:
@@ -433,6 +505,9 @@ public:
 		}
 		return Phobos::readBuffer[0] != 0;
 	}
+
+	inline const char* c_str() const
+	{ return ((*this).data()); }
 };
 
 // a wrapper for an optional value

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <CRT.h>
+
 class PhobosCRT {
 public:
 
@@ -14,7 +16,8 @@ public:
 
 	template<size_t Size>
 	static void strCopy(char(&Dest)[Size], const char* Source) {
-		strCopy(Dest, Source, Size);
+		//strCopy(Dest, Source, Size);
+		CRT::strcnpy(dest, source, size);
 	}
 
 	template<size_t Size>

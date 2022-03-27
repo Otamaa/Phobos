@@ -8,6 +8,7 @@
 #include <Ext/WeaponType/Body.h>
 #include <Utilities/EnumFunctions.h>
 
+#include <VeinholeMonsterClass.h>
 #pragma region DETONATION
 
 bool DetonationInDamageArea = true;
@@ -19,8 +20,15 @@ DEFINE_HOOK(0x46920B, BulletClass_Detonate, 0x6)
 	if (auto const pWHExt = WarheadTypeExt::ExtMap.Find(pThis->WH))
 	{
 		GET_BASE(const CoordStruct*, pCoords, 0x8);
-		auto const pTechno = pThis ? pThis->Owner : nullptr;
-		auto const pHouse = pTechno ? pTechno->Owner : nullptr;
+		auto pTechno = pThis ? pThis->Owner : nullptr;
+		auto pHouse = pTechno ? pTechno->GetOwningHouse() : nullptr;
+
+		if (auto const pWeapon = pThis->GetWeaponType())
+		{
+			if (auto const pVeins = specific_cast<VeinholeMonsterClass*>(pThis->Target))
+				if (pThis->GetWeaponType()->Damage > 0)
+					pVeins->ReceiveDamage(&pThis->GetWeaponType()->Damage, 0, pWeapon->Warhead, pTechno, false, false, pHouse);
+		}
 
 		pWHExt->Detonate(pTechno, pHouse, pThis, *pCoords);
 	}

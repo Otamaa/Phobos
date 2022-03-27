@@ -15,7 +15,7 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 	if (!args->IgnoreDefenses)
 	{
 		const auto pExt = TechnoExt::ExtMap.Find(pThis);
-		if (const auto pShieldData = pExt->Shield.get())
+		if (const auto pShieldData = pExt->GetShield())
 		{
 			if (!pShieldData->IsActive())
 				return 0;
@@ -34,11 +34,9 @@ DEFINE_HOOK(0x7019D8, TechnoClass_ReceiveDamage_SkipLowDamageCheck, 0x5)
 	GET(int*, Damage, EBX);
 
 	const auto pExt = TechnoExt::ExtMap.Find(pThis);
-	if (const auto pShieldData = pExt->Shield.get())
-	{
-		if (pShieldData->IsActive())
-			return 0x7019E3;
-	}
+
+	if (pExt->GetShield() && pExt->GetShield()->IsActive())
+		return 0x7019E3;
 
 	return *Damage >= 0 ? 0x7019E3 : 0x7019DD;
 }
@@ -121,7 +119,7 @@ DEFINE_HOOK(0x6F9E50, TechnoClass_AI_Shield, 0x5)
 	if (pExt->CurrentShieldType && pExt->CurrentShieldType->Strength && !pExt->Shield)
 		pExt->Shield = std::make_unique<ShieldClass>(pThis);
 
-	if (const auto pShieldData = pExt->Shield.get())
+	if (const auto pShieldData = pExt->GetShield())
 		pShieldData->AI();
 
 	return 0;
@@ -134,7 +132,7 @@ DEFINE_HOOK(0x71A88D, TemporalClass_AI_Shield, 0x0)
 	if (auto const pTarget = pThis->Target)
 	{
 		const auto pExt = TechnoExt::ExtMap.Find(pTarget);
-		if (const auto pShieldData = pExt->Shield.get())
+		if (const auto pShieldData = pExt->GetShield())
 		{
 			if (pShieldData->IsAvailable())
 				pShieldData->AI_Temporal();
@@ -163,42 +161,6 @@ DEFINE_HOOK(0x739956, DeploysInto_UndeploysInto_SyncShieldStatus, 0x6) //UnitCla
 	GET(TechnoClass*, pTo, EBX);
 
 	ShieldClass::SyncShieldToAnother(pFrom, pTo);
-	return 0;
-}
-
-DEFINE_HOOK(0x6F65D1, TechnoClass_DrawHealthBar_DrawBuildingShieldBar, 0x6)
-{
-	GET(TechnoClass*, pThis, ESI);
-	GET(int, iLength, EBX);
-	GET_STACK(Point2D*, pLocation, STACK_OFFS(0x4C, -0x4));
-	GET_STACK(RectangleStruct*, pBound, STACK_OFFS(0x4C, -0x8));
-
-	const auto pExt = TechnoExt::ExtMap.Find(pThis);
-	if (const auto pShieldData = pExt->Shield.get())
-	{
-		if (pShieldData->IsAvailable())
-			pShieldData->DrawShieldBar(iLength, pLocation, pBound);
-	}
-
-	return 0;
-}
-
-DEFINE_HOOK(0x6F683C, TechnoClass_DrawHealthBar_DrawOtherShieldBar, 0x7)
-{
-	GET(TechnoClass*, pThis, ESI);
-	GET_STACK(Point2D*, pLocation, STACK_OFFS(0x4C, -0x4));
-	GET_STACK(RectangleStruct*, pBound, STACK_OFFS(0x4C, -0x8));
-
-	const auto pExt = TechnoExt::ExtMap.Find(pThis);
-	if (const auto pShieldData = pExt->Shield.get())
-	{
-		if (pShieldData->IsAvailable())
-		{
-			const int iLength = pThis->WhatAmI() == AbstractType::Infantry ? 8 : 17;
-			pShieldData->DrawShieldBar(iLength, pLocation, pBound);
-		}
-	}
-
 	return 0;
 }
 

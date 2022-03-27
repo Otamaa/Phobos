@@ -13,6 +13,7 @@ public:
 	Valueable<int> SegmentLength;
 	Valueable<bool> IgnoreVertical;
 	Valueable<bool> IsIntense;
+	Valueable<int> InitialDelay;
 
 	LaserTrailTypeClass(const char* pTitle = NONE_STR) : Enumerable<LaserTrailTypeClass>(pTitle)
 		, IsHouseColor(false)
@@ -22,6 +23,7 @@ public:
 		, SegmentLength(128)
 		, IgnoreVertical(false)
 		, IsIntense(false)
+		, InitialDelay(0)
 	{ }
 
 	virtual ~LaserTrailTypeClass() override = default;

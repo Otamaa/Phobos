@@ -7,6 +7,7 @@
 template<> const DWORD Extension<BulletClass>::Canary = 0x2A2A2A2A;
 BulletExt::ExtContainer BulletExt::ExtMap;
 
+void BulletExt::ExtData::InitializeConstants() { }
 void BulletExt::ExtData::ApplyRadiationToCell(CellStruct Cell, int Spread, int RadLevel)
 {
 	auto const pThis = this->OwnerObject();
@@ -15,6 +16,7 @@ void BulletExt::ExtData::ApplyRadiationToCell(CellStruct Cell, int Spread, int R
 	auto const pWeaponExt = WeaponTypeExt::ExtMap.FindOrAllocate(pWeapon);
 	auto const pRadType = pWeaponExt->RadType;
 	auto const pThisHouse = pThis->Owner ? pThis->Owner->Owner : nullptr;
+	bool CreateNew = true;
 
 	if (Instances.Count > 0)
 	{
@@ -26,28 +28,26 @@ void BulletExt::ExtData::ApplyRadiationToCell(CellStruct Cell, int Spread, int R
 					Spread == pSite->OwnerObject()->Spread;
 			});
 
-		if (it == Instances.end())
-		{
-			RadSiteExt::CreateInstance(Cell, Spread, RadLevel, pWeaponExt, pThisHouse);
-		}
-		else
+		if (it != Instances.end())
 		{
 			auto const pRadExt = *it;
 			auto const pRadSite = pRadExt->OwnerObject();
+			auto const nRadLevel = (int)RadSiteExt::GetRadLevelAt(pRadSite, Cell);
+			auto nAmount = RadLevel;
 
-			if (pRadSite->GetRadLevel() + RadLevel > pRadType->GetLevelMax())
+			if (nRadLevel + RadLevel > pRadType->GetLevelMax())
+				nAmount = pRadType->GetLevelMax() - nRadLevel;
+
+			if (nAmount > 0)
 			{
-				RadLevel = pRadType->GetLevelMax() - pRadSite->GetRadLevel();
+				CreateNew = false;
+				RadSiteExt::Add(pRadSite, nAmount, pThisHouse);
 			}
-
-			// Handle It
-			RadSiteExt::Add(pRadSite, RadLevel);
 		}
 	}
-	else
-	{
+
+	if (CreateNew)
 		RadSiteExt::CreateInstance(Cell, Spread, RadLevel, pWeaponExt, pThisHouse);
-	}
 }
 
 void BulletExt::InitializeLaserTrails(BulletClass* pThis)
@@ -57,18 +57,36 @@ void BulletExt::InitializeLaserTrails(BulletClass* pThis)
 	if (pExt->LaserTrails.size())
 		return;
 
+	size_t nTotal = 0;
 	if (auto pTypeExt = BulletTypeExt::ExtMap.Find(pThis->Type))
 	{
-		auto pOwner = pThis->Owner ? pThis->Owner->Owner : nullptr;
+		auto pOwner = pThis->Owner ? pThis->Owner->Owner : HouseClass::FindCivilianSide();
 
 		for (auto const& idxTrail: pTypeExt->LaserTrail_Types)
 		{
 			if (auto const pLaserType = LaserTrailTypeClass::Array[idxTrail].get())
 			{
 				pExt->LaserTrails.push_back(
-					std::make_unique<LaserTrailClass>(pLaserType, pOwner));
+					std::make_unique<LaserTrailClass>(pLaserType, pOwner->LaserColor));
+				++nTotal;
 			}
 		}
+	}
+
+	if (nTotal > 0)
+		pExt->LaserTrails.resize(nTotal);
+	else
+		pExt->LaserTrails.clear();
+}
+
+void BulletExt::UpdateOwner(BulletClass* pThis)
+{
+	if (pThis->Owner && pThis->WeaponType)
+	{
+		auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pThis->WeaponType);
+
+		if (pWeaponExt && pWeaponExt->DetachedFromOwner.Get())
+			pThis->Owner = nullptr;
 	}
 }
 
@@ -82,6 +100,7 @@ void BulletExt::ExtData::Serialize(T& Stm)
 		.Process(this->Intercepted)
 		.Process(this->ShouldIntercept)
 		.Process(this->LaserTrails)
+		.Process(this->AnotherData)
 		;
 }
 
@@ -95,6 +114,20 @@ void BulletExt::ExtData::SaveToStream(PhobosStreamWriter& Stm)
 {
 	Extension<BulletClass>::SaveToStream(Stm);
 	this->Serialize(Stm);
+}
+
+void BulletExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
+
+bool BulletExt::LoadGlobals(PhobosStreamReader& Stm)
+{
+	return Stm
+		.Success();
+}
+
+bool BulletExt::SaveGlobals(PhobosStreamWriter& Stm)
+{
+	return Stm
+		.Success();
 }
 
 // =============================

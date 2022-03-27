@@ -26,11 +26,13 @@ public:
 		{ }
 
 		virtual ~ExtData() = default;
+		virtual size_t Size() const { return sizeof(*this); }
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
+		virtual void InitializeConstants() override { }
 
 	private:
 		template <typename T>
@@ -42,9 +44,12 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
 
 	static const bool SetAnimOwnerHouseKind(AnimClass* pAnim, HouseClass* pInvoker , HouseClass* pVictim, bool defaultToVictimOwner = true);
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 };

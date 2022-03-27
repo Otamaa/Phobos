@@ -43,7 +43,7 @@ DEFINE_HOOK(0x747B49, VehicleTypeClass_ReadINI, 0x6)
 				char savedName[0x19];
 				strcpy_s(savedName, unitType->ImageFile);
 				strcpy_s(unitType->ImageFile, nameBuffer);
-				unitType->LoadVoxel();
+				unitType->LoadVoxel__();
 				strcpy_s(unitType->ImageFile, savedName);
 			}
 			else
@@ -73,7 +73,7 @@ DEFINE_HOOK(0x41CD54, AircraftTypeClass_ReadINI, 0x6)
 				char savedName[0x19];
 				strcpy_s(savedName, aircraftType->ImageFile);
 				strcpy_s(aircraftType->ImageFile, nameBuffer);
-				aircraftType->LoadVoxel();
+				aircraftType->LoadVoxel__();
 				strcpy_s(aircraftType->ImageFile, savedName);
 			}
 		}

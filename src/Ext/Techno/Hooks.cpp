@@ -3,38 +3,50 @@
 
 #include "Body.h"
 
+#include <Ext/Anim/Body.h>
 #include <Ext/TechnoType/Body.h>
 #include <Ext/WarheadType/Body.h>
 #include <Ext/WeaponType/Body.h>
 #include <Utilities/EnumFunctions.h>
-
+/*
 DEFINE_HOOK(0x6F9E50, TechnoClass_AI, 0x5)
 {
 	GET(TechnoClass*, pThis, ECX);
-	auto pExt = TechnoExt::ExtMap.Find(pThis);
+	//auto pExt = TechnoExt::ExtMap.Find(pThis);
 
+	//pExt->AnotherData.MyDriveData.OnUpdate(pThis);
+	//JJFacingFunctional::AI(pThis);
+	TechnoExt::UpdateMindControlAnim(pThis);
 	TechnoExt::ApplyMindControlRangeLimit(pThis);
 	TechnoExt::ApplyInterceptor(pThis);
-	TechnoExt::ApplyPowered_KillSpawns(pThis);
+	//TechnoExt::ApplyPowered_KillSpawns(pThis);
 	TechnoExt::ApplySpawn_LimitRange(pThis);
 	TechnoExt::CheckDeathConditions(pThis);
 	TechnoExt::EatPassengers(pThis);
 
 	// LaserTrails update routine is in TechnoClass::AI hook because TechnoClass::Draw
 	// doesn't run when the object is off-screen which leads to visual bugs - Kerbiter
-	for (auto const& trail : pExt->LaserTrails)
-		trail->Update(TechnoExt::GetFLHAbsoluteCoords(pThis, trail->FLH, trail->IsOnTurret));
+	//for (auto const& trail : pExt->LaserTrails)
+	//	trail->Update(TechnoExt::GetFLHAbsoluteCoords(pThis, trail->FLH, trail->IsOnTurret));
 
+	//TrailsManager::AI(pThis);
 	return 0;
 }
-
-
+*/
 DEFINE_HOOK(0x6F42F7, TechnoClass_Init_NewEntities, 0x2)
 {
 	GET(TechnoClass*, pThis, ESI);
 
-	TechnoExt::InitializeShield(pThis);
-	TechnoExt::InitializeLaserTrails(pThis);
+	TechnoExt::InitializeItems(pThis);
+	return 0;
+}
+
+DEFINE_HOOK(0x73DE90, UnitClass_SimpleDeployer_TransferLaserTrails, 0x6)
+{
+	GET(UnitClass*, pUnit, ESI);
+
+	TechnoExt::InitializeLaserTrail(pUnit, true);
+	//TrailsManager::Construct(pUnit,true);
 
 	return 0;
 }
@@ -86,7 +98,7 @@ DEFINE_HOOK(0x6FD05E, TechnoClass_Rearm_Delay_BurstDelays, 0x7)
 	auto pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon);
 	int burstDelay = -1;
 
-	if (pWeaponExt->Burst_Delays.size() > (unsigned)pThis->CurrentBurstIndex)
+	if (pWeaponExt->Burst_Delays.size() > (size_t)pThis->CurrentBurstIndex)
 		burstDelay = pWeaponExt->Burst_Delays[pThis->CurrentBurstIndex - 1];
 	else if (pWeaponExt->Burst_Delays.size() > 0)
 		burstDelay = pWeaponExt->Burst_Delays[pWeaponExt->Burst_Delays.size() - 1];
@@ -137,6 +149,8 @@ DEFINE_HOOK(0x6F3C88, TechnoClass_Transform_6F3AD0_BurstFLH_2, 0x6)
 // Author: Otamaa
 DEFINE_HOOK(0x518505, InfantryClass_TakeDamage_NotHuman, 0x4)
 {
+	enum { Delete = 0x518619, DoOtherAffects = 0x518515 };
+
 	GET(InfantryClass* const, pThis, ESI);
 	REF_STACK(args_ReceiveDamage const, receiveDamageArgs, STACK_OFFS(0xD0, -0x4));
 
@@ -145,6 +159,7 @@ DEFINE_HOOK(0x518505, InfantryClass_TakeDamage_NotHuman, 0x4)
 
 	int resultSequence = Die(1);
 	auto const pTypeExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType());
+	R->ECX(pThis);
 
 	if (pTypeExt->NotHuman_RandomDeathSequence.Get())
 		resultSequence = ScenarioClass::Instance->Random.RandomRanged(Die(1), Die(5));
@@ -153,26 +168,37 @@ DEFINE_HOOK(0x518505, InfantryClass_TakeDamage_NotHuman, 0x4)
 	{
 		if (auto const pWarheadExt = WarheadTypeExt::ExtMap.Find(receiveDamageArgs.WH))
 		{
-			int whSequence = pWarheadExt->NotHuman_DeathSequence.Get();
-			if (whSequence > 0)
-				resultSequence = Math::min(Die(whSequence), Die(5));
+			if (auto pDeathAnim = pWarheadExt->AnotherData.NotHuman_DeathAnim.Get(nullptr))
+			{
+				if (auto pAnim = GameCreate<AnimClass>(pDeathAnim, pThis->Location))
+				{
+					AnimExt::SetAnimOwnerHouseKind(pAnim, nullptr, pThis->GetOwningHouse());
+					pAnim->ZAdjust = pThis->GetZAdjustment();
+
+					return Delete;
+				}
+			}
+			else
+			{
+				int whSequence = pWarheadExt->NotHuman_DeathSequence.Get();
+				if (whSequence > 0)
+					resultSequence = Math::min(Die(whSequence), Die(5));
+			}
 		}
 	}
 
-	R->ECX(pThis);
-	pThis->PlayAnim(static_cast<Sequence>(resultSequence), true);
-
-	return 0x518515;
+	//BugFix : when the sequence not declared , it keep the infantry alive ! , wtf WW ?!
+	return (!pThis->PlayAnim(static_cast<DoType>(resultSequence), true)) ? Delete : DoOtherAffects;
 }
 
 DEFINE_HOOK(0x5218F3, InfantryClass_WhatWeaponShouldIUse_DeployFireWeapon, 0x6)
 {
-    GET(TechnoTypeClass*, pType, ECX);
+	GET(TechnoTypeClass*, pType, ECX);
 
-    if (pType->DeployFireWeapon == -1)
-        return 0x52194E;
+	if (pType->DeployFireWeapon == -1)
+		return 0x52194E;
 
-    return 0;
+	return 0;
 }
 
 // Customizable OpenTopped Properties
@@ -275,9 +301,9 @@ DEFINE_HOOK(0x6FE19A, TechnoClass_FireAt_AreaFire, 0x6)
 			std::vector<CellStruct> adjacentCells = GeneralUtils::AdjacentCellsInRange(static_cast<size_t>(range + 0.99));
 			size_t size = adjacentCells.size();
 
-			for (unsigned int i = 0; i < size; i++)
+			for (size_t i = 0; i < size; i++)
 			{
-				int rand = ScenarioClass::Instance->Random.RandomRanged(0, size - 1);
+				int rand = ScenarioClass::Instance->Random(0, size - 1);
 				unsigned int cellIndex = (i + rand) % size;
 				CellStruct tgtPos = pCell->MapCoords + adjacentCells[cellIndex];
 				CellClass* tgtCell = MapClass::Instance->GetCellAt(tgtPos);
@@ -321,47 +347,25 @@ DEFINE_HOOK(0x702819, TechnoClass_ReceiveDamage_Decloak, 0xA)
 	return 0x702823;
 }
 
-DEFINE_HOOK(0x73DE90, UnitClass_SimpleDeployer_TransferLaserTrails, 0x6)
-{
-	GET(UnitClass*, pUnit, ESI);
-
-	auto pTechnoExt = TechnoExt::ExtMap.Find(pUnit);
-	auto pTechnoTypeExt = TechnoTypeExt::ExtMap.Find(pUnit->GetTechnoType());
-
-	if (pTechnoExt && pTechnoTypeExt)
-	{
-		if (pTechnoExt->LaserTrails.size())
-			pTechnoExt->LaserTrails.clear();
-
-		for (auto const& entry : pTechnoTypeExt->LaserTrailData)
-		{
-			if (auto const pLaserType = LaserTrailTypeClass::Array[entry.idxType].get())
-			{
-				pTechnoExt->LaserTrails.push_back(std::make_unique<LaserTrailClass>(
-					pLaserType, pUnit->Owner, entry.FLH, entry.IsOnTurret));
-			}
-		}
-	}
-
-	return 0;
-}
-
 DEFINE_HOOK(0x71067B, TechnoClass_EnterTransport_LaserTrails, 0x7)
 {
 	GET(TechnoClass*, pTechno, EDI);
 
 	auto pTechnoExt = TechnoExt::ExtMap.Find(pTechno);
-	auto pTechnoTypeExt = TechnoTypeExt::ExtMap.Find(pTechno->GetTechnoType());
 
-	if (pTechnoExt && pTechnoTypeExt)
+	if (pTechnoExt)
 	{
-		for (auto &pLaserTrail : pTechnoExt->LaserTrails)
+		if (pTechnoExt->LaserTrails.size())
 		{
-			pLaserTrail->Visible = false;
-			pLaserTrail->LastLocation = { };
+			for (auto const& pLaserTrail : pTechnoExt->LaserTrails)
+			{
+				pLaserTrail->Visible = false;
+				pLaserTrail->LastLocation = { };
+			}
 		}
 	}
 
+	//TrailsManager::Hide(pTechno);
 	return 0;
 }
 
@@ -372,13 +376,17 @@ DEFINE_HOOK(0x5F4F4E, ObjectClass_Unlimbo_LaserTrails, 0x7)
 	auto pTechnoExt = TechnoExt::ExtMap.Find(pTechno);
 	if (pTechnoExt)
 	{
-		for (auto &pLaserTrail : pTechnoExt->LaserTrails)
+		if (pTechnoExt->LaserTrails.size())
 		{
-			pLaserTrail->LastLocation = { };
-			pLaserTrail->Visible = true;
+			for (auto const& pLaserTrail : pTechnoExt->LaserTrails)
+			{
+				pLaserTrail->LastLocation = { };
+				pLaserTrail->Visible = true;
+			}
 		}
 	}
 
+	//TrailsManager::Hide(pTechno);
 	return 0;
 }
 
@@ -402,11 +410,11 @@ DEFINE_HOOK(0x6F3428, TechnoClass_GetWeapon_ForceWeapon, 0x6)
 
 		if (auto pTechnoTypeExt = TechnoTypeExt::ExtMap.Find(pTechnoType))
 		{
-			if (pTechnoTypeExt->ForceWeapon_Naval_Decloaked >= 0 
-				&& pTargetType->Cloakable && pTargetType->Naval 
+			if (pTechnoTypeExt->ForceWeapon_Naval_Decloaked >= 0
+				&& pTargetType->Cloakable && pTargetType->Naval
 				&& pTarget->CloakState == CloakState::Uncloaked)
 			{
-				R->EAX(pTechnoTypeExt->ForceWeapon_Naval_Decloaked);
+				R->EAX(pTechnoTypeExt->ForceWeapon_Naval_Decloaked.Get());
 				return 0x6F37AF;
 			}
 		}
@@ -421,6 +429,83 @@ DEFINE_HOOK(0x6FB086, TechnoClass_Reload_ReloadAmount, 0x8)
 	GET(TechnoClass* const, pThis, ECX);
 
 	TechnoExt::UpdateSharedAmmo(pThis);
+
+	return 0;
+}
+/*
+DEFINE_HOOK(0x6FA793, TechnoClass_AI_SelfHealGain, 0x5)
+{
+	enum { Infantry = 0x6FA8D2, Unit = 0x6FA7E2, None = 0x6FA941, GameChecks = 0x6FA7B2 };
+
+	GET(TechnoClass*, pThis, ESI);
+
+	bool skipSelfHeal = pThis->Health >= pThis->GetTechnoType()->Strength;
+
+	if (!pThis->Health)
+		skipSelfHeal = true;
+
+	R->BL(skipSelfHeal);
+
+	if (auto const pExt = TechnoTypeExt::ExtMap.Find(pThis->GetTechnoType()))
+	{
+		if (pExt->SelfHealGainType.isset())
+		{
+			if (!skipSelfHeal)
+			{
+				if (pExt->SelfHealGainType.Get() == SelfHealGainType::Infantry)
+					return Infantry;
+				else if (pExt->SelfHealGainType.Get() == SelfHealGainType::Units)
+					return Unit;
+			}
+
+			return None;
+		}
+	}
+
+	return GameChecks;
+}*/
+
+DEFINE_HOOK(0x6FA793, TechnoClass_AI_SelfHealGain, 0x5)
+{
+	enum { SkipGameSelfHeal = 0x6FA941 };
+
+	GET(TechnoClass*, pThis, ESI);
+
+	TechnoExt::ApplyGainedSelfHeal(pThis);
+
+	return SkipGameSelfHeal;
+}
+
+DEFINE_HOOK(0x70A4FB, TechnoClass_Draw_Pips_SelfHealGain, 0x5)
+{
+	enum { SkipGameDrawing = 0x70A6C0 };
+
+	GET(TechnoClass*, pThis, ECX);
+	GET_STACK(Point2D*, pLocation, STACK_OFFS(0x74, -0x4));
+	GET_STACK(RectangleStruct*, pBounds, STACK_OFFS(0x74, -0xC));
+
+	TechnoExt::DrawSelfHealPips(pThis, pLocation, pBounds);
+
+	return SkipGameDrawing;
+}
+
+DEFINE_HOOK(0x6FF43F, TechnoClass_FireAt_FeedbackWeapon, 0x6)
+{
+	GET(TechnoClass*, pThis, ESI);
+	GET(WeaponTypeClass*, pWeapon, EBX);
+
+	if (auto pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon))
+	{
+		if (pWeaponExt->FeedbackWeapon.isset())
+		{
+			auto fbWeapon = pWeaponExt->FeedbackWeapon.Get();
+
+			if (pThis->InOpenToppedTransport && !fbWeapon->FireInTransport)
+				return 0;
+
+			WeaponTypeExt::DetonateAt(fbWeapon, pThis, pThis);
+		}
+	}
 
 	return 0;
 }

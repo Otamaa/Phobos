@@ -30,6 +30,7 @@ public:
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
+		virtual void InitializeConstants() override;
 	private:
 		template <typename T>
 		void Serialize(T& Stm);

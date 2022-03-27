@@ -11,7 +11,7 @@ DEFINE_HOOK(0x4A757B, DiskLaser_Circle, 0x6)
 		int new_Circumference = pTypeData->DiskLaser_Circumference;
 		WeaponTypeExt::nOldCircumference = new_Circumference;
 
-		Point2D* DiscLaserCoords = reinterpret_cast<Point2D*>(0x8A0180);
+		Point2D* DiscLaserCoords = Make_Pointer<Point2D>(0x8A0180);
 		DiscLaserCoords[0].X = 0;
 		DiscLaserCoords[0].Y = -1 * new_Circumference;
 		DiscLaserCoords[1].X = (int)(0.3746065934159128 * new_Circumference);

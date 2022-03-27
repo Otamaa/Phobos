@@ -6,6 +6,8 @@
 #include <Utilities/Container.h>
 #include <Utilities/TemplateDef.h>
 
+#include <Misc/Otamaa/Ext/BuildingType/Body.h>
+
 class BuildingTypeExt
 {
 public:
@@ -32,6 +34,9 @@ public:
 		ValueableVector<TechnoTypeClass*> Grinding_DisallowTypes;
 		NullableIdx<VocClass> Grinding_Sound;
 		Nullable<WeaponTypeClass*> Grinding_Weapon;
+		Valueable<BuildingTypeClass*> RubbleIntact;
+
+		Otamaa::BTExt::ExtData AnotherTypeData;
 
 		ExtData(BuildingTypeClass* OwnerObject) : Extension<BuildingTypeClass>(OwnerObject)
 			, PowersUp_Owner { AffectedHouse::Owner }
@@ -47,12 +52,14 @@ public:
 			, Grinding_DisallowTypes {}
 			, Grinding_Sound {}
 			, Grinding_Weapon {}
+			, AnotherTypeData { }
+			, RubbleIntact { nullptr }
 		{ }
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void LoadFromINIFile(CCINIClass * pINI) override;
-		virtual void Initialize() override;
+		virtual void InitializeConstants() override { }
 		virtual void CompleteInitialization();
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override {
@@ -60,6 +67,11 @@ public:
 
 		virtual void LoadFromStream(PhobosStreamReader & Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter & Stm) override;
+		void CleanUp()
+		{
+			OccupierMuzzleFlashes.Clear();
+			AnotherTypeData.CleanUp();
+		}
 
 	private:
 		template <typename T>
@@ -70,7 +82,7 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
-
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 		virtual bool Load(BuildingTypeClass* pThis, IStream* pStm) override;
 	};
 
@@ -81,5 +93,4 @@ public:
 	static int GetEnhancedPower(BuildingClass* pBuilding, HouseClass* pHouse);
 	static bool CanUpgrade(BuildingClass* pBuilding, BuildingTypeClass* pUpgradeType, HouseClass* pUpgradeOwner);
 	static int GetUpgradesAmount(BuildingTypeClass* pBuilding, HouseClass* pHouse);
-	static bool CanGrindTechno(BuildingClass* pBuilding, TechnoClass* pTechno);
 };

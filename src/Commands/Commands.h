@@ -28,3 +28,5 @@ void MakeCommand() {
 	CommandClass::Array->AddItem(command);
 };
 
+#define Make(arg)\
+		MakeCommand<arg>();

@@ -4,15 +4,16 @@ DEFINE_HOOK(0x527B0A, INIClass__Get_UUID, 0x8)
 {
 	GET(wchar_t*, buffer, ECX);
 
-	if (buffer[0] != L'{') {
-
+	if (buffer[0] != L'{')
+	{
+		//size_t nBufferSize = 0x80;
 		if (_wcsicmp(buffer, L"Drive") == 0) {
 			wcscpy(buffer, L"{4A582741-9839-11d1-B709-00A024DDAFD1}");
 			return 0;
 		}
 
 		if (_wcsicmp(buffer, L"Jumpjet") == 0) {
-		   wcscpy(buffer, L"{92612C46-F71F-11d1-AC9F-006008055BB5}");
+			wcscpy(buffer, L"{92612C46-F71F-11d1-AC9F-006008055BB5}");
 			return 0;
 		}
 

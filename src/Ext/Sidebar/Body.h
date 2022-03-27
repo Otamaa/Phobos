@@ -21,11 +21,13 @@ public:
 		{ }
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
+		virtual void InitializeConstants() override;
+
 	private:
 		template <typename T>
 		void Serialize(T& Stm);
@@ -38,6 +40,7 @@ public:
 	static IStream* g_pStm;
 
 	static SHPStruct* TabProducingProgress[4];
+	static SHPStruct* SidesMouseShape;
 
 	static void Allocate(SidebarClass* pThis);
 	static void Remove(SidebarClass* pThis);

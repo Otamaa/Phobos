@@ -12,41 +12,41 @@ class HouseClass;
 enum PhobosTriggerEvent
 {
 	LocalVariableGreaterThan = 500,
-	LocalVariableLessThan = 501,
-	LocalVariableEqualsTo = 502,
-	LocalVariableGreaterThanOrEqualsTo = 503,
-	LocalVariableLessThanOrEqualsTo = 504,
-	LocalVariableAndIsTrue = 505,
-	GlobalVariableGreaterThan = 506,
-	GlobalVariableLessThan = 507,
-	GlobalVariableEqualsTo = 508,
-	GlobalVariableGreaterThanOrEqualsTo = 509,
-	GlobalVariableLessThanOrEqualsTo = 510,
-	GlobalVariableAndIsTrue = 511,
-	LocalVariableGreaterThanLocalVariable = 512,
-	LocalVariableLessThanLocalVariable = 513,
-	LocalVariableEqualsToLocalVariable = 514,
-	LocalVariableGreaterThanOrEqualsToLocalVariable = 515,
-	LocalVariableLessThanOrEqualsToLocalVariable = 516,
-	LocalVariableAndIsTrueLocalVariable = 517,
-	GlobalVariableGreaterThanLocalVariable = 518,
-	GlobalVariableLessThanLocalVariable = 519,
-	GlobalVariableEqualsToLocalVariable = 520,
-	GlobalVariableGreaterThanOrEqualsToLocalVariable = 521,
-	GlobalVariableLessThanOrEqualsToLocalVariable = 522,
-	GlobalVariableAndIsTrueLocalVariable = 523,
-	LocalVariableGreaterThanGlobalVariable = 524,
-	LocalVariableLessThanGlobalVariable = 525,
-	LocalVariableEqualsToGlobalVariable = 526,
-	LocalVariableGreaterThanOrEqualsToGlobalVariable = 527,
-	LocalVariableLessThanOrEqualsToGlobalVariable = 528,
-	LocalVariableAndIsTrueGlobalVariable = 529,
-	GlobalVariableGreaterThanGlobalVariable = 530,
-	GlobalVariableLessThanGlobalVariable = 531,
-	GlobalVariableEqualsToGlobalVariable = 532,
-	GlobalVariableGreaterThanOrEqualsToGlobalVariable = 533,
-	GlobalVariableLessThanOrEqualsToGlobalVariable = 534,
-	GlobalVariableAndIsTrueGlobalVariable = 535,
+	LocalVariableLessThan,
+	LocalVariableEqualsTo,
+	LocalVariableGreaterThanOrEqualsTo,
+	LocalVariableLessThanOrEqualsTo,
+	LocalVariableAndIsTrue,
+	GlobalVariableGreaterThan,
+	GlobalVariableLessThan,
+	GlobalVariableEqualsTo,
+	GlobalVariableGreaterThanOrEqualsTo,
+	GlobalVariableLessThanOrEqualsTo,
+	GlobalVariableAndIsTrue,
+	LocalVariableGreaterThanLocalVariable,
+	LocalVariableLessThanLocalVariable,
+	LocalVariableEqualsToLocalVariable,
+	LocalVariableGreaterThanOrEqualsToLocalVariable,
+	LocalVariableLessThanOrEqualsToLocalVariable,
+	LocalVariableAndIsTrueLocalVariable,
+	GlobalVariableGreaterThanLocalVariable,
+	GlobalVariableLessThanLocalVariable,
+	GlobalVariableEqualsToLocalVariable,
+	GlobalVariableGreaterThanOrEqualsToLocalVariable,
+	GlobalVariableLessThanOrEqualsToLocalVariable,
+	GlobalVariableAndIsTrueLocalVariable,
+	LocalVariableGreaterThanGlobalVariable,
+	LocalVariableLessThanGlobalVariable,
+	LocalVariableEqualsToGlobalVariable,
+	LocalVariableGreaterThanOrEqualsToGlobalVariable,
+	LocalVariableLessThanOrEqualsToGlobalVariable,
+	LocalVariableAndIsTrueGlobalVariable,
+	GlobalVariableGreaterThanGlobalVariable,
+	GlobalVariableLessThanGlobalVariable,
+	GlobalVariableEqualsToGlobalVariable,
+	GlobalVariableGreaterThanOrEqualsToGlobalVariable,
+	GlobalVariableLessThanOrEqualsToGlobalVariable,
+	GlobalVariableAndIsTrueGlobalVariable,
 };
 
 class TEventExt
@@ -61,12 +61,11 @@ public:
 		{ }
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
-
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
-
+		virtual void InitializeConstants() override;
 	private:
 		template <typename T>
 		void Serialize(T& Stm);
@@ -85,7 +84,10 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 };

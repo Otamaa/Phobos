@@ -48,7 +48,12 @@
 #include <FootClass.h>
 #include <VocClass.h>
 #include <VoxClass.h>
-#include <ArmorType.h>
+#include <ParticleSystemTypeClass.h>
+
+#include <FileFormats/_Loader.h>
+#include <Helpers/Enumerators.h>
+
+#include <Misc/Otamaa/New/Type/ShapeHandlerEnumerator.h>
 
 namespace detail {
 	template <typename T>
@@ -63,6 +68,26 @@ namespace detail {
 				return true;
 			}
 			else {
+				Debug::INIParseFailed(pSection, pKey, pValue);
+			}
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read(ParticleSystemTypeClass*& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			auto const pValue = parser.value();
+			auto const parsed = !allocate ? ParticleSystemTypeClass::Find(pValue):GameCreate<ParticleSystemTypeClass>(pValue);
+			if (parsed || INIClass::IsBlank(pValue))
+			{
+				value = parsed;
+				return true;
+			}
+			else
+			{
 				Debug::INIParseFailed(pSection, pKey, pValue);
 			}
 		}
@@ -95,26 +120,24 @@ namespace detail {
 		return false;
 	}
 
-	/*
-	template <>
-	inline bool read<ArmorType>(ArmorType& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
-		int buffer;
-		if (parser.ReadArmor(pSection, pKey, &buffer)) {
-			value = buffer;
-			return true;
-		}
-		else if (!parser.empty()) {
-			Debug::INIParseFailed(pSection, pKey, parser.value(), "Expected a valid ArmorType");
-		}
-		return false;
-	}
-	*/
-
 	template <>
 	inline bool read<unsigned short>(unsigned short& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
 		int buffer;
 		if (parser.ReadInteger(pSection, pKey, &buffer)) {
+			buffer = abs(buffer);
 			value = static_cast<unsigned short>(buffer);
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<short>(short& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		int buffer;
+		if (parser.ReadInteger(pSection, pKey, &buffer))
+		{
+			value = static_cast<short>(buffer);
 			return true;
 		}
 		return false;
@@ -124,6 +147,7 @@ namespace detail {
 	inline bool read<BYTE>(BYTE& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
 		int buffer;
 		if (parser.ReadInteger(pSection, pKey, &buffer)) {
+			buffer = abs(buffer);
 			if (buffer <= 255 && buffer >= 0) {
 				value = static_cast<BYTE>(buffer); // shut up shut up shut up C4244
 				return true;
@@ -140,9 +164,9 @@ namespace detail {
 
 	template <>
 	inline bool read<float>(float& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
-		double buffer;
-		if (parser.ReadDouble(pSection, pKey, &buffer)) {
-			value = static_cast<float>(buffer);
+		float buffer;
+		if (parser.ReadFloat(pSection, pKey, &buffer)) {
+			value = (buffer);
 			return true;
 		}
 		else if (!parser.empty()) {
@@ -165,8 +189,51 @@ namespace detail {
 	}
 
 	template <>
+	inline bool read<CellStruct>(CellStruct& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		Point2D pBuffer;
+		if (parser.Read2Integers(pSection, pKey, (int*)&pBuffer))
+		{
+			value.X = (short)pBuffer.X;
+			value.Y = (short)pBuffer.Y;
+			return true;
+		}
+		return false;
+	}
+
+	template <>
 	inline bool read<Point2D>(Point2D& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
 		if (parser.Read2Integers(pSection, pKey, (int*)&value)) {
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<Point3D>(Point3D& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.Read3Integers(pSection, pKey, (int*)&value))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<RectangleStruct>(RectangleStruct& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.Read4Integers(pSection, pKey, (int*)&value))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<Point2DByte>(Point2DByte& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.Read2Bytes(pSection, pKey, (BYTE*)&value))
+		{
 			return true;
 		}
 		return false;
@@ -203,17 +270,80 @@ namespace detail {
 	}
 
 	template <>
-	inline bool read<SHPStruct*>(SHPStruct*& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
-		if (parser.ReadString(pSection, pKey)) {
-			char flag[256];
+	inline bool read<SHPStruct*>(SHPStruct*& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
 			auto const pValue = parser.value();
-			_snprintf_s(flag, 255, "%s.shp", pValue);
-			if (auto const pImage = FileSystem::LoadSHPFile(flag)) {
-				value = pImage;
+
+			if (CCINIClass::IsBlank(pValue))
+			{
+				value = nullptr;
+				return false;
+			}
+
+			if (auto const parsed = ShapeHandlerEnumerator::FindOrAllocate(pValue))
+			{
+				if(auto const pShape = parsed->GetOrDefaultShape())
+					value = pShape;
+
+				return value;
+			}
+		}
+
+		return false;
+	}
+
+	template <>
+	inline bool read<SelfHealGainType>(SelfHealGainType& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+
+			if (_strcmpi(parser.value(), "none") == 0 || _strcmpi(parser.value(), "<none>") == 0)
+			{
+				value = SelfHealGainType::None;
+			}
+			else if (_strcmpi(parser.value(), "infantry") == 0)
+			{
+				value = SelfHealGainType::Infantry;
+			}
+			else if (_strcmpi(parser.value(), "units") == 0)
+			{
+				value = SelfHealGainType::Units;
+			}
+			else
+			{
+				Debug::INIParseFailed(pSection, pKey, parser.value(), "Expected a self heal gain type");
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<ShapeHandlerEnumerator*>(ShapeHandlerEnumerator*& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			auto const pValue = parser.value();
+
+			if (CCINIClass::IsBlank(pValue))
+			{
+				value = nullptr;
+				return false;
+			}
+
+			if (auto const parsed = ShapeHandlerEnumerator::FindOrAllocate(pValue))
+			{
+				parsed->FetchSHP();
+				value = parsed;
 				return true;
 			}
-			else {
-				Debug::Log("Failed to find file %s referenced by [%s]%s=%s\n", flag, pSection, pKey, pValue);
+			else
+			{
+				Debug::INIParseFailed(pSection, pKey, pValue);
 			}
 		}
 		return false;
@@ -341,7 +471,7 @@ namespace detail {
 	inline bool read<Leptons>(Leptons& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate) {
 		double buffer;
 		if (parser.ReadDouble(pSection, pKey, &buffer)) {
-			value = Leptons(Game::F2I(buffer * 256.0));
+			value = Leptons(buffer);
 			return true;
 		}
 		else if (!parser.empty()) {
@@ -452,6 +582,73 @@ namespace detail {
 					parsed |= AffectedTarget::All;
 				}
 				else if (_strcmpi(cur, "none")) {
+					Debug::INIParseFailed(pSection, pKey, parser.value(), "Expected a super weapon target");
+					return false;
+				}
+			}
+			value = parsed;
+			return true;
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<LandType>(LandType& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			auto parsed = LandType::Clear;
+
+			auto str = parser.value();
+			char* context = nullptr;
+			for (auto cur = strtok_s(str, Phobos::readDelims, &context); cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
+			{
+				if (!_strcmpi(cur, "Road"))
+				{
+					parsed = LandType::Road;
+				}
+				else if (!_strcmpi(cur, "Water"))
+				{
+					parsed = LandType::Water;
+				}
+				else if (!_strcmpi(cur, "Rock"))
+				{
+					parsed = LandType::Rock;
+				}
+				else if (!_strcmpi(cur, "Wall"))
+				{
+					parsed = LandType::Wall;
+				}
+				else if (!_strcmpi(cur, "Tiberium"))
+				{
+					parsed = LandType::Tiberium;
+				}
+				else if (!_strcmpi(cur, "Beach"))
+				{
+					parsed = LandType::Beach;
+				}
+				else if (!_strcmpi(cur, "Rough"))
+				{
+					parsed = LandType::Rough;
+				}
+				else if (!_strcmpi(cur, "Ice"))
+				{
+					parsed = LandType::Ice;
+				}
+				else if (!_strcmpi(cur, "Railroad"))
+				{
+					parsed = LandType::Railroad;
+				}
+				else if (!_strcmpi(cur, "Tunnel"))
+				{
+					parsed = LandType::Tunnel;
+				}
+				else if (!_strcmpi(cur, "Weeds"))
+				{
+					parsed = LandType::Weeds;
+				}
+				else if (_strcmpi(cur, "none"))
+				{
 					Debug::INIParseFailed(pSection, pKey, parser.value(), "Expected a super weapon target");
 					return false;
 				}
@@ -597,17 +794,331 @@ namespace detail {
 		return false;
 	}
 
+	template <>
+	inline bool read<Layer>(Layer& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			Layer parsed = Layer::None;
+			auto const str = parser.value();
+
+			if (str != nullptr
+				&& strlen(str) != 0)
+			{
+				if (_strcmpi(str, "underground") == 0)
+				{
+					parsed = Layer::Underground;
+				}
+				else if (_strcmpi(str, "surface") == 0)
+				{
+					parsed = Layer::Surface;
+				}
+				else if (_strcmpi(str, "ground") == 0)
+				{
+					parsed = Layer::Ground;
+				}
+				else if (_strcmpi(str, "air") == 0)
+				{
+					parsed = Layer::Air;
+				}
+				else if (_strcmpi(str, "top") == 0)
+				{
+					parsed = Layer::Top;
+				}else
+				{
+					Debug::INIParseFailed(pSection, pKey, parser.value(), "Expect a Valid Layer !");
+				}
+			}
+
+			value = parsed;
+			return true;
+		}
+
+		return false;
+	}
+
+	template <>
+	inline bool read(TileType& value, INI_EX& parser, const char* pSection, const char* pKey, bool bAllocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			auto parsed = TileType::Unk;
+			auto cur = parser.value();
+
+			if (!_strcmpi(cur, "Tunnel"))
+			{
+				parsed = TileType::Tunnel;
+			}
+			else if (!_strcmpi(cur, "Water"))
+			{
+				parsed = TileType::Water;
+			}
+			else if (!_strcmpi(cur, "Ramp"))
+			{
+				parsed = TileType::Ramp;
+			}
+			else if (!_strcmpi(cur, "Blank"))
+			{
+				parsed = TileType::Blank;
+			}
+			else if (!_strcmpi(cur, "Shore"))
+			{
+				parsed = TileType::Shore;
+			}
+			else if (!_strcmpi(cur, "Wet"))
+			{
+				parsed = TileType::Wet;
+			}
+			else if (!_strcmpi(cur, "MiscPave"))
+			{
+				parsed = TileType::MiscPave;
+			}
+			else if (!_strcmpi(cur, "Pave"))
+			{
+				parsed = TileType::Pave;
+			}
+			else if (!_strcmpi(cur, "DirtRoad"))
+			{
+				parsed = TileType::DirtRoad;
+			}
+			else if (!_strcmpi(cur, "PavedRoad"))
+			{
+				parsed = TileType::PavedRoad;
+			}
+			else if (!_strcmpi(cur, "PavedRoadEnd"))
+			{
+				parsed = TileType::PavedRoadEnd;
+			}
+			else if (!_strcmpi(cur, "PavedRoadSlope"))
+			{
+				parsed = TileType::PavedRoadSlope;
+			}
+			else if (!_strcmpi(cur, "Median"))
+			{
+				parsed = TileType::Median;
+			}
+			else if (!_strcmpi(cur, "Bridge"))
+			{
+				parsed = TileType::Bridge;
+			}
+			else if (!_strcmpi(cur, "WoodBridge"))
+			{
+				parsed = TileType::WoodBridge;
+			}
+			else if (!_strcmpi(cur, "ClearToSandLAT"))
+			{
+				parsed = TileType::ClearToSandLAT;
+			}
+			else if (!_strcmpi(cur, "Green"))
+			{
+				parsed = TileType::Green;
+			}
+			else if (!_strcmpi(cur, "NotWater"))
+			{
+				parsed = TileType::NotWater;
+			}
+			else if (!_strcmpi(cur, "DestroyableCliff"))
+			{
+				parsed = TileType::DestroyableCliff;
+			}
+			else if (!INIClass::IsBlank(cur) && !bAllocate)
+			{
+				Debug::INIParseFailed(pSection, pKey, cur);
+				return false;
+			}
+
+			if(parsed != TileType::Unk )
+			{
+				value = parsed;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template <>
+	inline bool read<TypeList<int>>(TypeList<int>& value, INI_EX& parser, const char* pSection, const char* pKey, bool allocate)
+	{
+		if (parser.ReadString(pSection, pKey))
+		{
+			value.Clear();
+			char* context = nullptr;
+			for (auto pCur = strtok_s(parser.value(), Phobos::readDelims, &context); pCur; pCur = strtok_s(nullptr, Phobos::readDelims, &context))
+			{
+				int buffer = 0;
+				if (Parser<int>::Parse(pCur, &buffer))
+				{
+					value.AddItem(buffer);
+					return true;
+				}
+				else if (!INIClass::IsBlank(pCur))
+				{
+					Debug::INIParseFailed(pSection, pKey, pCur);
+				}
+			}
+		}
+		return false;
+	}
+
 	template <typename T>
-	void parse_values(std::vector<T>& vector, INI_EX& parser, const char* pSection, const char* pKey) {
-		char* context = nullptr;
-		for (auto pCur = strtok_s(parser.value(), Phobos::readDelims, &context); pCur; pCur = strtok_s(nullptr, Phobos::readDelims, &context)) {
-			T buffer = T();
-			if (Parser<T>::Parse(pCur, &buffer)) {
+	void parse_values(std::vector<T>& vector, INI_EX& parser, const char* pSection, const char* pKey, bool bAllocate = false)
+	{	char* context = nullptr;
+		for (auto pCur = strtok_s(parser.value(), Phobos::readDelims, &context); pCur; pCur = strtok_s(nullptr, Phobos::readDelims, &context))
+		{
+			auto buffer = T();
+			if (Parser<T>::Parse(pCur, &buffer))
 				vector.push_back(buffer);
-			}
-			else if (!INIClass::IsBlank(pCur)) {
+			else if (!INIClass::IsBlank(pCur) && !bAllocate)
 				Debug::INIParseFailed(pSection, pKey, pCur);
+		}
+	}
+
+	template <>
+	inline void parse_values(std::vector<LandType>& vector, INI_EX& parser, const char* pSection, const char* pKey, bool bAllocate)
+	{
+		char* context = nullptr;
+		for (auto cur = strtok_s(parser.value(), Phobos::readDelims, &context); cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
+		{
+			auto parsed = LandType::Clear;
+			if (!_strcmpi(cur, "Road"))
+			{
+				parsed = LandType::Road;
 			}
+			else if (!_strcmpi(cur, "Water"))
+			{
+				parsed = LandType::Water;
+			}
+			else if (!_strcmpi(cur, "Rock"))
+			{
+				parsed = LandType::Rock;
+			}
+			else if (!_strcmpi(cur, "Wall"))
+			{
+				parsed = LandType::Wall;
+			}
+			else if (!_strcmpi(cur, "Tiberium"))
+			{
+				parsed = LandType::Tiberium;
+			}
+			else if (!_strcmpi(cur, "Beach"))
+			{
+				parsed = LandType::Beach;
+			}
+			else if (!_strcmpi(cur, "Rough"))
+			{
+				parsed = LandType::Rough;
+			}
+			else if (!_strcmpi(cur, "Ice"))
+			{
+				parsed = LandType::Ice;
+			}
+			else if (!_strcmpi(cur, "Railroad"))
+			{
+				parsed = LandType::Railroad;
+			}
+			else if (!_strcmpi(cur, "Tunnel"))
+			{
+				parsed = LandType::Tunnel;
+			}
+			else if (!_strcmpi(cur, "Weeds"))
+			{
+				parsed = LandType::Weeds;
+			}
+			else if (!INIClass::IsBlank(cur) && !bAllocate)
+				Debug::INIParseFailed(pSection, pKey, cur);
+
+			vector.push_back(parsed);
+		}
+	}
+
+	template <>
+	inline void parse_values(std::vector<TileType>& vector, INI_EX& parser, const char* pSection, const char* pKey, bool bAllocate)
+	{
+		char* context = nullptr;
+		for (auto cur = strtok_s(parser.value(), Phobos::readDelims, &context); cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
+		{
+			auto parsed = TileType::Unk;
+
+			if (!_strcmpi(cur, "Tunnel"))
+			{
+				parsed = TileType::Tunnel;
+			}
+			else if (!_strcmpi(cur, "Water"))
+			{
+				parsed = TileType::Water;
+			}
+			else if (!_strcmpi(cur, "Ramp"))
+			{
+				parsed = TileType::Ramp;
+			}
+			else if (!_strcmpi(cur, "Blank"))
+			{
+				parsed = TileType::Blank;
+			}
+			else if (!_strcmpi(cur, "Shore"))
+			{
+				parsed = TileType::Shore;
+			}
+			else if (!_strcmpi(cur, "Wet"))
+			{
+				parsed = TileType::Wet;
+			}
+			else if (!_strcmpi(cur, "MiscPave"))
+			{
+				parsed = TileType::MiscPave;
+			}
+			else if (!_strcmpi(cur, "Pave"))
+			{
+				parsed = TileType::Pave;
+			}
+			else if (!_strcmpi(cur, "DirtRoad"))
+			{
+				parsed = TileType::DirtRoad;
+			}
+			else if (!_strcmpi(cur, "PavedRoad"))
+			{
+				parsed = TileType::PavedRoad;
+			}
+			else if (!_strcmpi(cur, "PavedRoadEnd"))
+			{
+				parsed = TileType::PavedRoadEnd;
+			}
+			else if (!_strcmpi(cur, "PavedRoadSlope"))
+			{
+				parsed = TileType::PavedRoadSlope;
+			}
+			else if (!_strcmpi(cur, "Median"))
+			{
+				parsed = TileType::Median;
+			}
+			else if (!_strcmpi(cur, "Bridge"))
+			{
+				parsed = TileType::Bridge;
+			}
+			else if (!_strcmpi(cur, "WoodBridge"))
+			{
+				parsed = TileType::WoodBridge;
+			}
+			else if (!_strcmpi(cur, "ClearToSandLAT"))
+			{
+				parsed = TileType::ClearToSandLAT;
+			}
+			else if (!_strcmpi(cur, "Green"))
+			{
+				parsed = TileType::Green;
+			}
+			else if (!_strcmpi(cur, "NotWater"))
+			{
+				parsed = TileType::NotWater;
+			}
+			else if (!_strcmpi(cur, "DestroyableCliff"))
+			{
+				parsed = TileType::DestroyableCliff;
+			}
+			else if (!INIClass::IsBlank(cur) && !bAllocate)
+				Debug::INIParseFailed(pSection, pKey, cur);
+
+			vector.push_back(parsed);
 		}
 	}
 
@@ -756,10 +1267,11 @@ bool Promotable<T>::Save(PhobosStreamWriter& Stm) const {
 // ValueableVector
 
 template <typename T>
-void __declspec(noinline) ValueableVector<T>::Read(INI_EX& parser, const char* pSection, const char* pKey) {
+void __declspec(noinline) ValueableVector<T>::Read(INI_EX& parser, const char* pSection, const char* pKey, bool bAllocate)
+{
 	if (parser.ReadString(pSection, pKey)) {
 		this->clear();
-		detail::parse_values<T>(*this, parser, pSection, pKey);
+		detail::parse_values<T>(*this, parser, pSection, pKey, bAllocate);
 	}
 }
 

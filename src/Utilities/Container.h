@@ -257,13 +257,13 @@ public:
 	iterator begin() const
 	{
 		auto ret = this->Items.begin();
-		return reinterpret_cast<iterator& >(ret);
+		return reinterpret_cast<iterator&>(ret);
 	}
 
 	iterator end() const
 	{
 		auto ret = this->Items.end();
-		return reinterpret_cast<iterator& >(ret);
+		return reinterpret_cast<iterator&>(ret);
 	}
 
 private:
@@ -304,6 +304,26 @@ public:
 			this->InvalidateExtDataPointer(ptr, bRemoved);
 	}
 
+	auto begin() const
+	{
+		return this->Items.begin();
+	}
+
+	auto end() const
+	{
+		return this->Items.end();
+	}
+
+	auto size() const
+	{
+		return this->Items.size();
+	}
+
+	auto GetName() const
+	{
+		return this->Name;
+	}
+
 protected:
 	virtual void InvalidatePointer(void* ptr, bool bRemoved) { }
 
@@ -330,10 +350,14 @@ public:
 		if (auto const ptr = this->Items.find(key))
 			return ptr;
 
-		auto val = new extension_type(key);
-		val->EnsureConstanted();
+		if (auto val = new extension_type(key))
+		{
+			val->EnsureConstanted();
+			return this->Items.insert(key, val);
+		}
 
-		return this->Items.insert(key, val);
+		Debug::Log("CTOR of %s failed to allocate extension ! WTF!\n", this->Name);
+		return nullptr;
 	}
 
 	value_type Find(const_key_type key) const
@@ -348,6 +372,9 @@ public:
 
 	void Clear()
 	{
+		if (Phobos::Config::MoreDetailSLDebugLog)
+			Debug::Log("Checking size before clearing %u items from %s.\n", this->Items.size(), this->Name);
+
 		if (this->Items.size())
 		{
 			Debug::Log("Cleared %u items from %s.\n", this->Items.size(), this->Name);
@@ -369,7 +396,8 @@ public:
 
 	void PrepareStream(key_type key, IStream* pStm)
 	{
-		//Debug::Log("[PrepareStream] Next is %p of type '%s'\n", key, this->Name);
+		if (Phobos::Config::MoreDetailSLDebugLog)
+			Debug::Log("[PrepareStream] Next is %p of type '%s'\n", key, this->Name);
 
 		this->SavingObject = key;
 		this->SavingStream = pStm;
@@ -379,7 +407,8 @@ public:
 	{
 		if (this->SavingObject && this->SavingStream)
 		{
-			//Debug::Log("[SaveStatic] Saving object %p as '%s'\n", this->SavingObject, this->Name);
+			if (Phobos::Config::MoreDetailSLDebugLog)
+				Debug::Log("[SaveStatic] Saving object %p as '%s'\n", this->SavingObject, this->Name);
 
 			if (!this->Save(this->SavingObject, this->SavingStream))
 				Debug::FatalErrorAndExit("[SaveStatic] Saving failed!\n");
@@ -398,10 +427,11 @@ public:
 	{
 		if (this->SavingObject && this->SavingStream)
 		{
-			//Debug::Log("[LoadStatic] Loading object %p as '%s'\n", this->SavingObject, this->Name);
+			if (Phobos::Config::MoreDetailSLDebugLog)
+				Debug::Log("[LoadStatic] Loading object %p as '%s'\n", this->SavingObject, this->Name);
 
 			if (!this->Load(this->SavingObject, this->SavingStream))
-				Debug::FatalErrorAndExit("[LoadStatic] Loading failed!\n");
+				Debug::FatalErrorAndExit("[LoadStatic] Loading object %p as '%s failed!\n", this->SavingObject, this->Name);
 		}
 		else
 		{

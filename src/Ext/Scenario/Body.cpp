@@ -1,5 +1,7 @@
 #include "Body.h"
 
+#include <TagClass.h>
+
 template<> const DWORD Extension<ScenarioClass>::Canary = 0xABCD1595;
 std::unique_ptr<ScenarioExt::ExtData> ScenarioExt::Data = nullptr;
 
@@ -81,7 +83,13 @@ void ScenarioExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	// INI_EX exINI(pINI);
 
+	// Initialize
+	DefaultAmbientOriginal = ScenarioClass::Instance->AmbientOriginal;
+	DefaultAmbientCurrent = ScenarioClass::Instance->AmbientCurrent;
+	DefaultAmbientTarget = ScenarioClass::Instance->AmbientTarget;
+	DefaultNormalLighting = ScenarioClass::Instance->NormalLighting;
 
+	CurrentTint_Tiles = ScenarioClass::Instance->NormalLighting.Tint;
 
 }
 
@@ -92,6 +100,16 @@ void ScenarioExt::ExtData::Serialize(T& Stm)
 		.Process(this->Waypoints)
 		.Process(this->Variables[0])
 		.Process(this->Variables[1])
+		.Process(this->DefaultNormalLighting)
+		.Process(this->DefaultAmbientOriginal)
+		.Process(this->DefaultAmbientCurrent)
+		.Process(this->DefaultAmbientTarget)
+		.Process(this->CurrentTint_Tiles)
+		.Process(this->CurrentTint_Schemes)
+		.Process(this->CurrentTint_Hashes)
+
+		// Extra datas
+		.Process(SessionClass::Instance->Config)
 		;
 }
 
@@ -126,7 +144,6 @@ DEFINE_HOOK(0x683549, ScenarioClass_CTOR, 0x9)
 	GET(ScenarioClass*, pItem, EAX);
 
 	ScenarioExt::Allocate(pItem);
-
 	ScenarioExt::Global()->Waypoints.clear();
 	ScenarioExt::Global()->Variables[0].clear();
 	ScenarioExt::Global()->Variables[1].clear();

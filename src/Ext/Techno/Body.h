@@ -9,6 +9,8 @@
 #include <New/Entity/ShieldClass.h>
 #include <New/Entity/LaserTrailClass.h>
 
+#include <Misc/Otamaa/Ext/Techno/Body.h>
+
 class BulletClass;
 
 class TechnoExt
@@ -29,7 +31,10 @@ public:
 		Valueable<ShieldTypeClass*> CurrentShieldType;
 		Valueable<int> LastWarpDistance;
 		int Death_Countdown;
+		Valueable<AnimTypeClass*> MindControlRingAnimType;
 
+		Otamaa::TTExt::ExtData AnotherData;
+		bool DelayKill;
 		ExtData(TechnoClass* OwnerObject) : Extension<TechnoClass>(OwnerObject)
 			, InterceptedBullet { nullptr }
 			, Shield {}
@@ -38,20 +43,34 @@ public:
 			, LastKillWasTeamTarget { false }
 			, PassengerDeletionTimer {}
 			, PassengerDeletionCountDown { -1 }
-			, CurrentShieldType {}
+			, CurrentShieldType { nullptr }
 			, LastWarpDistance {}
 			, Death_Countdown(-1)
+			, MindControlRingAnimType { nullptr }
+			, AnotherData { }
+			, DelayKill { false  }
 		{ }
 
-		virtual ~ExtData() = default;
+		virtual ~ExtData() override
+		{
+			//TrailsManager::CleanUp(this->OwnerObject());
+		}
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override
 		{
-			this->Shield->InvalidatePointer(ptr);
+			if(this->GetShield())
+				this->GetShield()->InvalidatePointer(ptr);
 		}
 
+		ShieldClass* GetShield() const
+		{
+			return this->Shield.get();
+		}
+
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
+		virtual void InitializeConstants() override;
 
 	private:
 		template <typename T>
@@ -73,14 +92,16 @@ public:
 	static bool SaveGlobals(PhobosStreamWriter& Stm);
 
 	static bool IsActive(TechnoClass* pThis);
-
+	static bool IsReallyAlive(TechnoClass* const pThis);
+	static int GetSizeLeft(FootClass* const pThis);
+	static void Stop(TechnoClass* pThis, Mission eMission = Mission::Guard);
 	static bool IsHarvesting(TechnoClass* pThis);
 	static bool HasAvailableDock(TechnoClass* pThis);
 
-	static void InitializeLaserTrails(TechnoClass* pThis);
-	static void InitializeShield(TechnoClass* pThis);
-	static CoordStruct GetFLHAbsoluteCoords(TechnoClass* pThis, CoordStruct flh, bool turretFLH = false);
+	static void InitializeItems(TechnoClass* pThis);
+	static void InitializeLaserTrail(TechnoClass* pThis, bool bIsconverted);
 
+	static CoordStruct GetFLHAbsoluteCoords(TechnoClass* pThis, CoordStruct flh, bool turretFLH = false , CoordStruct Overrider = CoordStruct::Empty);
 	static CoordStruct GetBurstFLH(TechnoClass* pThis, int weaponIndex, bool& FLHFound);
 
 	static void FireWeaponAtSelf(TechnoClass* pThis, WeaponTypeClass* pWeaponType);
@@ -95,6 +116,8 @@ public:
 	static void ObjectKilledBy(TechnoClass* pThis, TechnoClass* pKiller);
 	static void EatPassengers(TechnoClass* pThis);
 	static void UpdateSharedAmmo(TechnoClass* pThis);
-
+	static void UpdateMindControlAnim(TechnoClass* pThis);
 	static bool CanFireNoAmmoWeapon(TechnoClass* pThis, int weaponIndex);
+	static void DrawSelfHealPips(TechnoClass* pThis, Point2D* pLocation, RectangleStruct* pBounds);
+	static void ApplyGainedSelfHeal(TechnoClass* pThis);
 };

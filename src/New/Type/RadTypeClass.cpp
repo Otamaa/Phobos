@@ -23,7 +23,7 @@ void RadTypeClass::LoadFromINI(CCINIClass* pINI)
 
 	INI_EX exINI(pINI);
 
-	this->RadWarhead.Read(exINI, section, "RadSiteWarhead", true);
+	this->RadWarhead.Read(exINI, section, "RadSiteWarhead",true);
 	this->RadSiteColor.Read(exINI, section, "RadColor");
 	this->DurationMultiple.Read(exINI, section, "RadDurationMultiple");
 	this->ApplicationDelay.Read(exINI, section, "RadApplicationDelay");

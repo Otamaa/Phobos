@@ -65,6 +65,21 @@ public:
 	virtual void LoadFromStream(PhobosStreamReader& Stm);
 	virtual void SaveToStream(PhobosStreamWriter& Stm);
 
+	const bool IsEligible()
+	{ return this->Strength > 0; }
+
+	static bool IsEligible(int nIdx)
+	{ 
+		if (auto pType = ShieldTypeClass::FindFromIndex(nIdx))	
+			return ShieldTypeClass::Array[nIdx].get()->IsEligible();
+
+		return false;
+	}
+
+	static void AddDefaults()
+	{
+		FindOrAllocate(NONE_STR);
+	}
 private:
 	template <typename T>
 	void Serialize(T& Stm);

@@ -8,6 +8,8 @@
 #include <New/Type/ShieldTypeClass.h>
 #include <New/Type/LaserTrailTypeClass.h>
 
+#include <Misc/Otamaa/Ext/TechnoType/Body.h>
+
 class Matrix3D;
 
 class TechnoTypeExt
@@ -18,6 +20,9 @@ public:
 	class ExtData final : public Extension<TechnoTypeClass>
 	{
 	public:
+
+		Otamaa::TTyExt::ExtDataB AnotherData;
+
 		Valueable<bool> HealthBar_Hide;
 		Valueable<CSFText> UIDescription;
 		Valueable<bool> LowSelectionPriority;
@@ -120,6 +125,7 @@ public:
 
 		ValueableVector<LaserTrailDataEntry> LaserTrailData;
 		Valueable<CSFText> EnemyUIName;
+		Nullable<SelfHealGainType> SelfHealGainType;
 
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject)
 			, HealthBar_Hide { false }
@@ -192,17 +198,18 @@ public:
 			, ForceWeapon_Naval_Decloaked { -1 }
 			, Ammo_Shared { false }
 			, Ammo_Shared_Group { -1 }
+			, AnotherData { }
+			, SelfHealGainType()
 		{ }
 
 		virtual ~ExtData() = default;
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
 		virtual void Initialize() override;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
-
 		void ApplyTurretOffset(Matrix3D* mtx, double factor = 1.0);
 		bool IsCountedAsHarvester();
 
@@ -219,7 +226,26 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
+
+	static HoverTypeClass* GetMyHover(TechnoTypeClass* pType)
+	{
+		if (!pType)
+			return HoverTypeClass::Array[0].get();
+
+		auto const pExt = TechnoTypeExt::ExtMap.Find(pType);
+
+		if (!pExt)
+			return HoverTypeClass::Array[0].get();
+
+		auto const pRet = HoverTypeClass::FindFromIndex(pExt->AnotherData.HoverLocoIdx.Get());
+
+		if (!pRet)
+			return HoverTypeClass::Array[0].get();
+
+		return pRet;
+	}
 
 	static ExtContainer ExtMap;
 
@@ -228,4 +254,6 @@ public:
 	// Ares 0.A
 	static const char* GetSelectionGroupID(ObjectTypeClass* pType);
 	static bool HasSelectionGroupID(ObjectTypeClass* pType, const char* pID);
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include <Helpers/Macro.h>
 #include <ASMMacros.h>
+#include <YRPPCore.h>
 
 // no more than 8 characters
 #define PATCH_SECTION_NAME ".patch"

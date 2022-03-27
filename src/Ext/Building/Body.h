@@ -12,6 +12,8 @@
 #include <Ext/Building/Body.h>
 #include <Ext/BuildingType/Body.h>
 
+#include <Misc/Otamaa/Ext/Building/Body.h>
+
 class BuildingExt
 {
 public:
@@ -25,22 +27,23 @@ public:
 		Valueable<int> GrindingWeapon_LastFiredFrame;
 		Nullable<BuildingClass*> CurrentAirFactory;
 
+		Otamaa::BExt::ExtData  AnotherData;
 		ExtData(BuildingClass* OwnerObject) : Extension<BuildingClass>(OwnerObject)
 			, DeployedTechno { false }
 			, LimboID { -1 }
 			, GrindingWeapon_LastFiredFrame { 0 }
-			, CurrentAirFactory(nullptr)
+			, CurrentAirFactory { nullptr }
+			, AnotherData { }
 
 		{ }
 
 		virtual ~ExtData() = default;
-
-		// virtual void LoadFromINIFile(CCINIClass* pINI) override;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
+		virtual void InitializeConstants() override;
 
 	private:
 		template <typename T>
@@ -52,6 +55,7 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
@@ -64,4 +68,6 @@ public:
 	static void UpdatePrimaryFactoryAI(BuildingClass* pThis);
 	static int CountOccupiedDocks(BuildingClass* pBuilding);
 	static bool HasFreeDocks(BuildingClass* pBuilding);
+	static bool CanGrindTechno(BuildingClass* pBuilding, TechnoClass* pTechno);
+	static bool DoGrindingExtras(BuildingClass* pBuilding, TechnoClass* pTechno);
 };

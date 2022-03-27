@@ -15,7 +15,7 @@ bool LaserTrailClass::Update(CoordStruct location)
 	}
 	else if (location.DistanceFrom(this->LastLocation.Get()) > this->Type->SegmentLength) // TODO reimplement IgnoreVertical properly?
 	{
-		if (this->Visible && (this->Type->IgnoreVertical ? (abs(location.X - this->LastLocation.Get().X) > 16 || abs(location.Y - this->LastLocation.Get().Y) > 16) : true))
+		if (AllowDraw(location))
 		{
 			// We spawn new laser segment if the distance is long enough, the game will do the rest - Kerbiter
 			LaserDrawClass* pLaser = GameCreate<LaserDrawClass>(
@@ -28,12 +28,23 @@ bool LaserTrailClass::Update(CoordStruct location)
 			pLaser->IsSupported = this->Type->IsIntense;
 
 			result = true;
+
 		}
 
 		this->LastLocation = location;
 	}
 
 	return result;
+}
+
+void LaserTrailClass::FixZLoc(bool forWho)
+{
+	if (forWho && LastLocation.isset())
+	{
+		auto nLastLoc = LastLocation.Get();
+		nLastLoc.Z = Map.GetCellFloorHeight(nLastLoc);
+		LastLocation = nLastLoc;
+	}
 }
 
 #pragma region Save/Load
@@ -48,6 +59,9 @@ bool LaserTrailClass::Serialize(T& stm)
 		.Process(this->IsOnTurret)
 		.Process(this->CurrentColor)
 		.Process(this->LastLocation)
+		.Process(this->InitialDelayTimer)
+		.Process(this->CanDraw)
+		.Process(this->InitialDelay)
 		.Success();
 };
 

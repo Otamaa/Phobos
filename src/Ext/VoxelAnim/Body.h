@@ -11,6 +11,7 @@
 #include <Helpers/Macro.h>
 
 #include <New/Entity/LaserTrailClass.h>
+#include <Misc/Otamaa/Ext/VoxelAnim/Body.h>
 
 class VoxelAnimExt
 {
@@ -23,11 +24,16 @@ public:
 
 		ValueableVector<std::unique_ptr<LaserTrailClass>> LaserTrails;
 
+		Otamaa::VExt::ExtData AnotherData;
 		ExtData(VoxelAnimClass* OwnerObject) : Extension<VoxelAnimClass>(OwnerObject)
 			, LaserTrails()
+			, AnotherData()
 		{ }
 
-		virtual ~ExtData() = default;
+		virtual ~ExtData() override
+		{
+			//TrailsManager::CleanUp(this->OwnerObject());
+		}
 		virtual size_t Size() const { return sizeof(*this); };
 		virtual void InvalidatePointer(void *ptr, bool bRemoved) override {}
 		virtual void LoadFromStream(PhobosStreamReader& Stm)override;

@@ -38,6 +38,7 @@ public:
 	bool IsAvailable();
 	bool IsBrokenAndNonRespawning();
 	ShieldTypeClass* GetType();
+	int GetFramesSinceLastBroken();
 
 	static void SyncShieldToAnother(TechnoClass* pFrom, TechnoClass* pTo);
 
@@ -87,6 +88,7 @@ private:
 	int Respawn_Rate_Warhead;
 
 	ShieldTypeClass* Type;
+	int LastBreakFrame;
 
 	struct Timers
 	{

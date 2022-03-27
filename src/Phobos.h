@@ -1,10 +1,12 @@
 #pragma once
 #include <Phobos.version.h>
+#include <YRPPGlobal.h>
 #include <Windows.h>
 
 class CCINIClass;
 class AbstractClass;
 
+constexpr auto ALL_STR = "<all>";
 constexpr auto NONE_STR = "<none>";
 constexpr auto NONE_STR2 = "none";
 constexpr auto TOOLTIPS_SECTION = "ToolTips";
@@ -26,13 +28,13 @@ public:
 	static char readBuffer[readLength];
 	static wchar_t wideBuffer[readLength];
 	static const char readDelims[4];
+    static const char readDefval[4];
 
 	static const char* AppIconPath;
 	static const wchar_t* VersionDescription;
 
-#ifdef DEBUG
 	static bool DetachFromDebugger();
-#endif
+
 	static void Clear();
 	static void PointerGotInvalid(AbstractClass* const pInvalid, bool const removed);
 	static HRESULT SaveGameData(IStream* pStm);
@@ -66,5 +68,10 @@ public:
 		static bool DevelopmentCommands;
 		static bool ArtImageSwap;
 		static bool AllowParallelAIQueues;
+		static bool DisableCustomRadSite;
+		static bool MoreDetailSLDebugLog;
+		static bool ShowHealthPercentEnabled;
+		static TCHAR PCName[MAX_COMPUTERNAME_LENGTH + 1];
+
 	};
 };

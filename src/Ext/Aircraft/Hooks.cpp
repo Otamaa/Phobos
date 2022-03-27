@@ -29,7 +29,8 @@ DEFINE_HOOK(0x417FF1, AircraftClass_Mission_Attack_StrafeShots, 0x6)
 	return 0;
 }
 
-DEFINE_HOOK(0x418409, AircraftClass_Mission_Attack_FireAtTarget_BurstFix, 0x0)
+//0x418409
+DEFINE_HOOK(0x418403, AircraftClass_Mission_Attack_FireAtTarget_BurstFix, 0x8) //0x0)
 {
 	GET(AircraftClass*, pThis, ESI);
 
@@ -40,7 +41,7 @@ DEFINE_HOOK(0x418409, AircraftClass_Mission_Attack_FireAtTarget_BurstFix, 0x0)
 	return 0x418478;
 }
 
-DEFINE_HOOK(0x4186B6, AircraftClass_Mission_Attack_FireAtTarget2_BurstFix, 0x0)
+DEFINE_HOOK(0x4186B6, AircraftClass_Mission_Attack_FireAtTarget2_BurstFix, 0x8)
 {
 	GET(AircraftClass*, pThis, ESI);
 
@@ -49,7 +50,7 @@ DEFINE_HOOK(0x4186B6, AircraftClass_Mission_Attack_FireAtTarget2_BurstFix, 0x0)
 	return 0x4186D7;
 }
 
-DEFINE_HOOK(0x418805, AircraftClass_Mission_Attack_FireAtTarget2Strafe_BurstFix, 0x0)
+DEFINE_HOOK(0x418805, AircraftClass_Mission_Attack_FireAtTarget2Strafe_BurstFix, 0x8)
 {
 	GET(AircraftClass*, pThis, ESI);
 
@@ -58,7 +59,7 @@ DEFINE_HOOK(0x418805, AircraftClass_Mission_Attack_FireAtTarget2Strafe_BurstFix,
 	return 0x418826;
 }
 
-DEFINE_HOOK(0x418914, AircraftClass_Mission_Attack_FireAtTarget3Strafe_BurstFix, 0x0)
+DEFINE_HOOK(0x418914, AircraftClass_Mission_Attack_FireAtTarget3Strafe_BurstFix, 0x8)
 {
 	GET(AircraftClass*, pThis, ESI);
 
@@ -67,7 +68,7 @@ DEFINE_HOOK(0x418914, AircraftClass_Mission_Attack_FireAtTarget3Strafe_BurstFix,
 	return 0x418935;
 }
 
-DEFINE_HOOK(0x418A23, AircraftClass_Mission_Attack_FireAtTarget4Strafe_BurstFix, 0x0)
+DEFINE_HOOK(0x418A23, AircraftClass_Mission_Attack_FireAtTarget4Strafe_BurstFix, 0x8)
 {
 	GET(AircraftClass*, pThis, ESI);
 
@@ -76,7 +77,8 @@ DEFINE_HOOK(0x418A23, AircraftClass_Mission_Attack_FireAtTarget4Strafe_BurstFix,
 	return 0x418A44;
 }
 
-DEFINE_HOOK(0x418B25, AircraftClass_Mission_Attack_FireAtTarget5Strafe_BurstFix, 0x0)
+//0x418B25
+DEFINE_HOOK(0x418B1F, AircraftClass_Mission_Attack_FireAtTarget5Strafe_BurstFix, 0x8)
 {
 	GET(AircraftClass*, pThis, ESI);
 

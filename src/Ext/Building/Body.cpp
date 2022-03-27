@@ -1,7 +1,13 @@
 #include "Body.h"
+#include <Ext/Techno/Body.h>
 
 template<> const DWORD Extension<BuildingClass>::Canary = 0x87654321;
 BuildingExt::ExtContainer BuildingExt::ExtMap;
+
+void BuildingExt::ExtData::InitializeConstants()
+{
+	this->AnotherData.Init(OwnerObject());
+}
 
 void BuildingExt::StoreTiberium(BuildingClass* pThis, float amount, int idxTiberiumType, int idxStorageTiberiumType)
 {
@@ -39,7 +45,7 @@ void BuildingExt::UpdatePrimaryFactoryAI(BuildingClass* pThis)
 
 	AircraftTypeClass* pAircraft = AircraftTypeClass::Array->GetItem(pOwner->ProducingAircraftTypeIndex);
 	FactoryClass* currFactory = pOwner->GetFactoryProducing(pAircraft);
-	DynamicVectorClass<BuildingClass*> airFactoryBuilding;
+	std::vector<BuildingClass*> airFactoryBuilding;
 	BuildingClass* newBuilding = nullptr;
 
 	// Update what is the current air factory for future comparisons
@@ -58,21 +64,30 @@ void BuildingExt::UpdatePrimaryFactoryAI(BuildingClass* pThis)
 	}
 
 	// Obtain a list of air factories for optimizing the comparisons
-	for (auto pBuilding : pOwner->Buildings)
-	{
-		if (pBuilding->Type->Factory == AbstractType::AircraftType)
+
+	auto const iter = std::find_if(pOwner->Buildings.begin(), pOwner->Buildings.end(), [&](BuildingClass* pBuilding)
+{
+		if (pBuilding && pBuilding->Type->Factory == AbstractType::AircraftType)
 		{
 			if (!currFactory && pBuilding->Factory)
 				currFactory = pBuilding->Factory;
 
-			airFactoryBuilding.AddItem(pBuilding);
+			return true;
 		}
-	}
+
+		return false;
+	});
+
+	if(iter != pOwner->Buildings.end())
+		airFactoryBuilding.push_back((*iter));
 
 	if (BuildingExt->CurrentAirFactory)
 	{
-		for (auto pBuilding : airFactoryBuilding)
-		{
+
+		std::for_each(airFactoryBuilding.begin(), airFactoryBuilding.end(), [&](BuildingClass* pBuilding) {
+			if (!pBuilding)
+				return;
+
 			if (pBuilding == BuildingExt->CurrentAirFactory)
 			{
 				BuildingExt->CurrentAirFactory->Factory = currFactory;
@@ -85,7 +100,7 @@ void BuildingExt::UpdatePrimaryFactoryAI(BuildingClass* pThis)
 				if (pBuilding->Factory)
 					pBuilding->Factory->AbandonProduction();
 			}
-		}
+		});
 
 		return;
 	}
@@ -93,29 +108,30 @@ void BuildingExt::UpdatePrimaryFactoryAI(BuildingClass* pThis)
 	if (!currFactory)
 		return;
 
-	for (auto pBuilding : airFactoryBuilding)
-	{
-		int nDocks = pBuilding->Type->NumberOfDocks;
-		int nOccupiedDocks = CountOccupiedDocks(pBuilding);
+	std::for_each(airFactoryBuilding.begin(), airFactoryBuilding.end(), [&](BuildingClass* pBuilding) {
+		if (!pBuilding)
+			return;
 
-		if (nOccupiedDocks < nDocks)
-		{
-			if (!newBuilding)
-			{
-				newBuilding = pBuilding;
-				newBuilding->Factory = currFactory;
-				newBuilding->IsPrimaryFactory = true;
-				BuildingExt->CurrentAirFactory = newBuilding;
+			int nDocks = pBuilding->Type->NumberOfDocks;
+			int nOccupiedDocks = CountOccupiedDocks(pBuilding);
 
-				continue;
+			if (nOccupiedDocks < nDocks) {
+				if (!newBuilding) {
+					newBuilding = pBuilding;
+					newBuilding->Factory = currFactory;
+					newBuilding->IsPrimaryFactory = true;
+					BuildingExt->CurrentAirFactory = newBuilding;
+
+					return;
+				}
 			}
-		}
 
-		pBuilding->IsPrimaryFactory = false;
+			pBuilding->IsPrimaryFactory = false;
 
-		if (pBuilding->Factory)
-			pBuilding->Factory->AbandonProduction();
-	}
+			if (pBuilding->Factory)
+				pBuilding->Factory->AbandonProduction();
+
+	});
 
 	return;
 }
@@ -126,14 +142,14 @@ int BuildingExt::CountOccupiedDocks(BuildingClass* pBuilding)
 		return 0;
 
 	int nOccupiedDocks = 0;
+	auto const iter = make_iterator(pBuilding->RadioLinks);
 
-	if (pBuilding->RadioLinks.IsAllocated)
+	if (!iter.empty())
 	{
-		for (auto i = 0; i < pBuilding->RadioLinks.Capacity; ++i)
-		{
-			if (auto const pLink = pBuilding->GetNthLink(i))
+		std::for_each(iter.begin(), iter.end(), [&nOccupiedDocks](TechnoClass const* pRadioContact) {
+			if (pRadioContact)
 				nOccupiedDocks++;
-		}
+		});
 	}
 
 	return nOccupiedDocks;
@@ -158,6 +174,59 @@ bool BuildingExt::HasFreeDocks(BuildingClass* pBuilding)
 	return false;
 }
 
+bool BuildingExt::CanGrindTechno(BuildingClass* pBuilding, TechnoClass* pTechno)
+{
+	if (!pBuilding->Type->Grinding || (pTechno->WhatAmI() != AbstractType::Infantry && pTechno->WhatAmI() != AbstractType::Unit))
+		return false;
+
+	if ((pBuilding->Type->InfantryAbsorb || pBuilding->Type->UnitAbsorb) &&
+		(pTechno->WhatAmI() == AbstractType::Infantry && !pBuilding->Type->InfantryAbsorb ||
+			pTechno->WhatAmI() == AbstractType::Unit && !pBuilding->Type->UnitAbsorb))
+	{
+		return false;
+	}
+
+	if (const auto pExt = BuildingTypeExt::ExtMap.Find(pBuilding->Type))
+	{
+		if (pBuilding->Owner == pTechno->Owner && !pExt->Grinding_AllowOwner)
+			return false;
+
+		if (pBuilding->Owner != pTechno->Owner && pBuilding->Owner->IsAlliedWith(pTechno) && !pExt->Grinding_AllowAllies)
+			return false;
+
+		if (pExt->Grinding_AllowTypes.size() > 0 && !pExt->Grinding_AllowTypes.Contains(pTechno->GetTechnoType()))
+			return false;
+
+		if (pExt->Grinding_DisallowTypes.size() > 0 && pExt->Grinding_DisallowTypes.Contains(pTechno->GetTechnoType()))
+			return false;
+	}
+
+	return true;
+}
+
+bool BuildingExt::DoGrindingExtras(BuildingClass* pBuilding, TechnoClass* pTechno)
+{
+	if (const auto pTypeExt = BuildingTypeExt::ExtMap.Find(pBuilding->Type))
+	{
+		if (const auto pExt = BuildingExt::ExtMap.Find(pBuilding))
+		{
+			if (pTypeExt->Grinding_Weapon.isset()
+				&& Unsorted::CurrentFrame >= pExt->GrindingWeapon_LastFiredFrame + pTypeExt->Grinding_Weapon.Get()->ROF)
+			{
+				TechnoExt::FireWeaponAtSelf(pBuilding, pTypeExt->Grinding_Weapon.Get());
+				pExt->GrindingWeapon_LastFiredFrame = Unsorted::CurrentFrame;
+			}
+		}
+
+		if (pTypeExt->Grinding_Sound.isset())
+		{
+			VocClass::PlayAt(pTypeExt->Grinding_Sound.Get(), pTechno->GetCoords());
+			return true;
+		}
+	}
+
+	return false;
+}
 // =============================
 // load / save
 
@@ -168,6 +237,8 @@ void BuildingExt::ExtData::Serialize(T& Stm)
 		.Process(this->DeployedTechno)
 		.Process(this->LimboID)
 		.Process(this->GrindingWeapon_LastFiredFrame)
+
+		.Process(this->AnotherData)
 		;
 }
 
@@ -195,6 +266,7 @@ bool BuildingExt::SaveGlobals(PhobosStreamWriter& Stm)
 		.Success();
 }
 
+void BuildingExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) { }
 // =============================
 // container
 

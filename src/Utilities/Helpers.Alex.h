@@ -197,28 +197,27 @@ namespace Helpers {
 			// flying objects are not included normally
 			if (includeInAir) {
 				// the not quite so fast way. skip everything not in the air.
-				for (auto const& pTechno : *TechnoClass::Array) {
-					if (pTechno->GetHeight() > 0) {
-						// rough estimation
-						if (pTechno->Location.DistanceFrom(coords) <= spread * 256) {
-							set.insert(pTechno);
-						}
-					}
-				}
+				auto const pTechArr = TechnoClass::Array();
+				std::for_each(pTechArr->begin(), pTechArr->end(), [&set,coords,spread](TechnoClass* const pTechno)
+				{
+					 if (pTechno->GetHeight() > 0)
+						 // rough estimation
+						 if (pTechno->Location.DistanceFrom(coords) <= spread * 256)
+								 set.insert(pTechno);
+				});
 			}
 
 			// look closer. the final selection. put all affected items in a vector.
 			std::vector<TechnoClass*> ret;
 			ret.reserve(set.size());
 
-			for (auto const& pTechno : set) {
+			std::for_each(set.begin(), set.end(), [&ret ,coords,spread](TechnoClass* const pTechno) {
 				auto const abs = pTechno->WhatAmI();
-
 				// ignore buildings that are not visible, like ambient light posts
 				if (abs == AbstractType::Building) {
 					auto const pBuilding = static_cast<BuildingClass*>(pTechno);
 					if (pBuilding->Type->InvisibleInGame) {
-						continue;
+						return;
 					}
 				}
 
@@ -235,7 +234,8 @@ namespace Helpers {
 				if (dist <= spread * 256) {
 					ret.push_back(pTechno);
 				}
-			}
+
+			});
 
 			return ret;
 		}
@@ -354,6 +354,7 @@ namespace Helpers {
 
 		inline void remove_non_paradroppables(std::vector<TechnoTypeClass*>& types, const char* section, const char* key) {
 			// remove all types that aren't either infantry or unit types
+
 			types.erase(std::remove_if(types.begin(), types.end(), [section, key](TechnoTypeClass* pItem) -> bool {
 				if (!is_any_of(pItem->WhatAmI(), AbstractType::InfantryType, AbstractType::UnitType)) {
 					Debug::INIParseFailed(section, key, pItem->ID, "Only InfantryTypes and UnitTypes are supported.");

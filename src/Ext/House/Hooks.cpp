@@ -1,8 +1,9 @@
 #include "Body.h"
 
-#include "../Techno/Body.h"
-#include "../Building/Body.h"
 #include <unordered_map>
+
+#include <Ext/Techno/Body.h>
+#include <Ext/Building/Body.h>
 
 DEFINE_HOOK(0x508C30, HouseClass_UpdatePower_UpdateCounter, 0x5)
 {
@@ -13,18 +14,15 @@ DEFINE_HOOK(0x508C30, HouseClass_UpdatePower_UpdateCounter, 0x5)
 
 	// This pre-iterating ensure our process to be done in O(NM) instead of O(N^2),
 	// as M should be much less than N, this will be a great improvement. - secsome
-	for (auto& pBld : pThis->Buildings)
-	{
-		if (pBld && !pBld->InLimbo && pBld->IsOnMap)
-		{
+	std::for_each(pThis->Buildings.begin(), pThis->Buildings.end(), [&](BuildingClass const* pBld) {
+		if (pBld && !pBld->InLimbo && pBld->IsOnMap) {
 			const auto pExt = BuildingTypeExt::ExtMap.Find(pBld->Type);
 			if (pExt->PowerPlantEnhancer_Buildings.size() &&
-				(pExt->PowerPlantEnhancer_Amount != 0 || pExt->PowerPlantEnhancer_Factor != 1.0f))
-			{
+				(pExt->PowerPlantEnhancer_Amount != 0 || pExt->PowerPlantEnhancer_Factor != 1.0f)) {
 				++pHouseExt->BuildingCounter[pExt];
 			}
 		}
-	}
+	});
 
 	return 0;
 }
@@ -60,6 +58,6 @@ DEFINE_HOOK(0x73E474, UnitClass_Unload_Storage, 0x6)
 		BuildingExt::StoreTiberium(pBuilding, amount, idxTiberium, storageTiberiumIndex);
 		amount = 0.0f;
 	}
-	
+
 	return 0;
 }

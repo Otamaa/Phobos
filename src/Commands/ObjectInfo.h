@@ -184,7 +184,7 @@ public:
 				display();
 
 				if (pTeam->CurrentScript->CurrentMission >= 0)
-					append("Current Script [Line = Action, Argument]: %d = %d,%d", pTeam->CurrentScript->CurrentMission, pTeam->CurrentScript->Type->ScriptActions[pTeam->CurrentScript->CurrentMission].Action, pTeam->CurrentScript->Type->ScriptActions[pTeam->CurrentScript->CurrentMission].Argument);
+					append("Current Script [Line = Action, Argument]: %d = %d,%d", pTeam->CurrentScript->CurrentMission, pTeam->CurrentScript->GetCurrentAction().Action, pTeam->CurrentScript->GetCurrentAction().Argument);
 				else
 					append("Current Script [Line = Action, Argument]: %d", pTeam->CurrentScript->CurrentMission);
 
@@ -208,6 +208,12 @@ public:
 				append("Target = %s, Distance = %d, Location = (%d, %d)\n", pTarget->GetTechnoType()->ID, (pTarget->DistanceFrom(pFoot) / 256), pTarget->GetMapCoords().X, pTarget->GetMapCoords().Y);
 			}
 
+			if (auto pAir = specific_cast<AircraftClass*>(pFoot))
+			{
+				append("MissionStatus Status %d ,Path Idx %d\n", pAir->MissionStatus,pAir->PlanningPathIdx);
+			}
+
+			append("Facing P[%d] S[%d] B[%d]\n", pFoot->PrimaryFacing.current().value(), pFoot->SecondaryFacing.current().value(), pFoot->BarrelFacing.current().value());
 			append("Current HP = (%d / %d)", pFoot->Health, pType->Strength);
 
 			auto pTechnoExt = TechnoExt::ExtMap.Find(pFoot);
@@ -262,6 +268,7 @@ public:
 				append("Target = %s, Distance = %d, Location = (%d, %d)\n", pTarget->GetTechnoType()->ID, (pTarget->DistanceFrom(pBuilding) / 256), pTarget->GetMapCoords().X, pTarget->GetMapCoords().Y);
 			}
 
+			append("Facing P[%d] S[%d] B[%d]\n", pBuilding->PrimaryFacing.current().value(), pBuilding->SecondaryFacing.current().value(), pBuilding->BarrelFacing.current().value());
 			append("Current HP = (%d / %d)\n", pBuilding->Health, pBuilding->Type->Strength);
 
 			auto pTechnoExt = TechnoExt::ExtMap.Find(pBuilding);

@@ -60,6 +60,7 @@ void SideExt::ExtData::Serialize(T& Stm)
 		.Process(this->IngameScore_LoseTheme)
 		;
 }
+void SideExt::ExtContainer::InvalidatePointer(void* ptr, bool bRemoved) {}
 
 void SideExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)
 {

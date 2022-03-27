@@ -6,6 +6,7 @@
 #include <Utilities/TemplateDef.h>
 
 #include <New/Type/LaserTrailTypeClass.h>
+#include <Misc/Otamaa/Ext/BulletType/Body.h>
 
 class BulletTypeExt
 {
@@ -22,6 +23,7 @@ public:
 		Valueable<bool> Shrapnel_AffectsGround;
 		Valueable<bool> Shrapnel_AffectsBuildings;
 
+		Otamaa::BlTExt::ExtData AnotherData;
 		ExtData(BulletTypeClass* OwnerObject) : Extension<BulletTypeClass>(OwnerObject)
 			, Interceptable { false }
 			, LaserTrail_Types {}
@@ -29,12 +31,13 @@ public:
 			, Gravity_HeightFix { false }
 			, Shrapnel_AffectsGround { false }
 			, Shrapnel_AffectsBuildings { false }
+			, AnotherData { }
 		{ }
 
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
-		// virtual void Initialize() override;
+		virtual void InitializeConstants() override { }
 
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
@@ -50,9 +53,12 @@ public:
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 
 	static double GetAdjustedGravity(BulletTypeClass* pType);
 	static BulletTypeClass* GetDefaultBulletType();

@@ -19,13 +19,14 @@ HANDLE Phobos::hInstance = 0;
 char Phobos::readBuffer[Phobos::readLength];
 wchar_t Phobos::wideBuffer[Phobos::readLength];
 const char Phobos::readDelims[4] = ",";
+const char Phobos::readDefval[4] = "";
 
 const char* Phobos::AppIconPath = nullptr;
 
 #ifdef STR_GIT_COMMIT
 const wchar_t* Phobos::VersionDescription = L"Phobos nightly build (" STR_GIT_COMMIT L" @ " STR_GIT_BRANCH L"). DO NOT SHIP IN MODS!";
 #elif !defined(IS_RELEASE_VER)
-const wchar_t* Phobos::VersionDescription = L"Phobos development build #" _STR(BUILD_NUMBER) L". Please test the build before shipping.";
+const wchar_t* Phobos::VersionDescription = L"Phobos Unofficial development build #" _STR(BUILD_NUMBER) L". Please test the build before shipping.";
 #else
 //const wchar_t* Phobos::VersionDescription = L"Phobos release build v" FILE_VERSION_STR L".";
 #endif
@@ -50,6 +51,11 @@ bool Phobos::Config::PrioritySelectionFiltering = true;
 bool Phobos::Config::DevelopmentCommands = true;
 bool Phobos::Config::ArtImageSwap = false;
 bool Phobos::Config::AllowParallelAIQueues = true;
+TCHAR Phobos::Config::PCName[MAX_COMPUTERNAME_LENGTH + 1];
+bool Phobos::Config::DisableCustomRadSite = false;
+bool Phobos::Config::MoreDetailSLDebugLog = false;
+bool Phobos::Config::ShowHealthPercentEnabled = false;
+
 
 void Phobos::CmdLineParse(char** ppArgs, int nNumArgs)
 {
@@ -62,7 +68,7 @@ void Phobos::CmdLineParse(char** ppArgs, int nNumArgs)
 		{
 			Phobos::AppIconPath = ppArgs[++i];
 		}
-#ifndef IS_RELEASE_VER 
+#ifndef IS_RELEASE_VER
 		if (_stricmp(pArg, "-b=" _STR(BUILD_NUMBER)) == 0)
 		{
 			HideWarning = true;
@@ -75,32 +81,12 @@ void Phobos::CmdLineParse(char** ppArgs, int nNumArgs)
 
 CCINIClass* Phobos::OpenConfig(const char* file)
 {
-	CCINIClass* pINI = GameCreate<CCINIClass>();
-
-	if (pINI)
-	{
-		CCFileClass* cfg = GameCreate<CCFileClass>(file);
-
-		if (cfg)
-		{
-			if (cfg->Exists())
-			{
-				pINI->ReadCCFile(cfg);
-			}
-			GameDelete(cfg);
-		}
-	}
-
-	return pINI;
+	return CCINIClass::LoadINIFile(file);
 }
 
 void Phobos::CloseConfig(CCINIClass*& pINI)
 {
-	if (pINI)
-	{
-		GameDelete(pINI);
-		pINI = nullptr;
-	}
+	CCINIClass::UnloadINIFile(pINI);
 }
 
 // =============================
@@ -118,33 +104,33 @@ bool __stdcall DllMain(HANDLE hInstance, DWORD dwReason, LPVOID v)
 DEFINE_HOOK(0x7CD810, ExeRun, 0x9)
 {
 	Patch::Apply();
+	DWORD dwSize = MAX_COMPUTERNAME_LENGTH + 1;
+	GetComputerName(Phobos::Config::PCName, &dwSize);
 
-#ifdef DEBUG
-
-	if (Phobos::DetachFromDebugger())
+	if (!_strcmpi(Phobos::Config::PCName, "DESKTOP-QT5G8K6"))
 	{
-		MessageBoxW(NULL,
-		L"You can now attach a debugger.\n\n"
+		if (Phobos::DetachFromDebugger())
+		{
+			MessageBoxW(NULL,
+			L"You can now attach a debugger.\n\n"
 
-		L"Press OK to continue YR execution.",
-		L"Debugger Notice", MB_OK);
+			L"Press OK to continue YR execution.",
+			L"Debugger Notice", MB_OK);
+		}
+		else
+		{
+			MessageBoxW(NULL,
+			L"You can now attach a debugger.\n\n"
+
+			L"To attach a debugger find the YR process in Process Hacker "
+			L"/ Visual Studio processes window and detach debuggers from it, "
+			L"then you can attach your own debugger. After this you should "
+			L"terminate Syringe.exe because it won't automatically exit when YR is closed.\n\n"
+
+			L"Press OK to continue YR execution.",
+			L"Debugger Notice", MB_OK);
+		}
 	}
-	else
-	{
-		MessageBoxW(NULL,
-		L"You can now attach a debugger.\n\n"
-
-		L"To attach a debugger find the YR process in Process Hacker "
-		L"/ Visual Studio processes window and detach debuggers from it, "
-		L"then you can attach your own debugger. After this you should "
-		L"terminate Syringe.exe because it won't automatically exit when YR is closed.\n\n"
-
-		L"Press OK to continue YR execution.",
-		L"Debugger Notice", MB_OK);
-	}
-
-
-#endif
 
 	return 0;
 }
@@ -163,75 +149,70 @@ DEFINE_HOOK(0x5FACDF, OptionsClass_LoadSettings_LoadPhobosSettings, 0x5)
 	Phobos::Config::ToolTipDescriptions = CCINIClass::INI_RA2MD->ReadBool("Phobos", "ToolTipDescriptions", true);
 	Phobos::Config::PrioritySelectionFiltering = CCINIClass::INI_RA2MD->ReadBool("Phobos", "PrioritySelectionFiltering", true);
 
-	CCINIClass* pINI_UIMD = Phobos::OpenConfig("uimd.ini");
-
-	// LoadingScreen
+	if (CCINIClass* pINI_UIMD = Phobos::OpenConfig((Make_Pointer<const char>(0x827DC8))))
 	{
-		Phobos::UI::DisableEmptySpawnPositions =
-			pINI_UIMD->ReadBool("LoadingScreen", "DisableEmptySpawnPositions", false);
-	}
+		// LoadingScreen
+		{
+			Phobos::UI::DisableEmptySpawnPositions =
+				pINI_UIMD->ReadBool("LoadingScreen", "DisableEmptySpawnPositions", false);
+		}
 
-	// ToolTips
+		// ToolTips
+		{
+			Phobos::UI::ExtendedToolTips =
+				pINI_UIMD->ReadBool(TOOLTIPS_SECTION, "ExtendedToolTips", false);
+
+			Phobos::UI::MaxToolTipWidth =
+				pINI_UIMD->ReadInteger(TOOLTIPS_SECTION, "MaxWidth", 0);
+
+			pINI_UIMD->ReadString(TOOLTIPS_SECTION, "CostLabel", NONE_STR, Phobos::readBuffer);
+			Phobos::UI::CostLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"$");
+
+			pINI_UIMD->ReadString(TOOLTIPS_SECTION, "PowerLabel", NONE_STR, Phobos::readBuffer);
+			Phobos::UI::PowerLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u26a1"); // ⚡
+
+			pINI_UIMD->ReadString(TOOLTIPS_SECTION, "TimeLabel", NONE_STR, Phobos::readBuffer);
+			Phobos::UI::TimeLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u231a"); // ⌚
+		}
+
+		// Sidebar
+		{
+			Phobos::UI::ShowHarvesterCounter =
+				pINI_UIMD->ReadBool(SIDEBAR_SECTION, "HarvesterCounter.Show", false);
+
+			pINI_UIMD->ReadString(SIDEBAR_SECTION, "HarvesterCounter.Label", NONE_STR, Phobos::readBuffer);
+			Phobos::UI::HarvesterLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u26cf"); // ⛏
+
+			Phobos::UI::HarvesterCounter_ConditionYellow =
+				pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "HarvesterCounter.ConditionYellow", Phobos::UI::HarvesterCounter_ConditionYellow);
+
+			Phobos::UI::HarvesterCounter_ConditionRed =
+				pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "HarvesterCounter.ConditionRed", Phobos::UI::HarvesterCounter_ConditionRed);
+
+			Phobos::UI::ShowProducingProgress =
+				pINI_UIMD->ReadBool(SIDEBAR_SECTION, "ProducingProgress.Show", false);
+
+			Phobos::UI::ShowPowerDelta =
+				pINI_UIMD->ReadBool(SIDEBAR_SECTION, "PowerDelta.Show", false);
+
+			Phobos::UI::PowerDelta_ConditionYellow =
+				pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "PowerDelta.ConditionYellow", Phobos::UI::PowerDelta_ConditionYellow);
+
+			Phobos::UI::PowerDelta_ConditionRed =
+				pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "PowerDelta.ConditionRed", Phobos::UI::PowerDelta_ConditionRed);
+		}
+
+		//commandclass cache
+		{
+			Phobos::Config::ShowHealthPercentEnabled = pINI_UIMD->ReadBool("CommandClass", "ShowHealthPercentEnabled", false);
+		}
+
+		Phobos::CloseConfig(pINI_UIMD);
+	}
+	else
 	{
-		Phobos::UI::ExtendedToolTips =
-			pINI_UIMD->ReadBool(TOOLTIPS_SECTION, "ExtendedToolTips", false);
-
-		Phobos::UI::MaxToolTipWidth =
-			pINI_UIMD->ReadInteger(TOOLTIPS_SECTION, "MaxWidth", 0);
-
-		pINI_UIMD->ReadString(TOOLTIPS_SECTION, "CostLabel", NONE_STR, Phobos::readBuffer);
-		Phobos::UI::CostLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"$");
-
-		pINI_UIMD->ReadString(TOOLTIPS_SECTION, "PowerLabel", NONE_STR, Phobos::readBuffer);
-		Phobos::UI::PowerLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u26a1"); // ⚡
-
-		pINI_UIMD->ReadString(TOOLTIPS_SECTION, "TimeLabel", NONE_STR, Phobos::readBuffer);
-		Phobos::UI::TimeLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u231a"); // ⌚
+		Debug::Log((Make_Pointer<const char>(0x827DAC)));
 	}
-
-	// Sidebar
-	{
-		Phobos::UI::ShowHarvesterCounter =
-			pINI_UIMD->ReadBool(SIDEBAR_SECTION, "HarvesterCounter.Show", false);
-
-		pINI_UIMD->ReadString(SIDEBAR_SECTION, "HarvesterCounter.Label", NONE_STR, Phobos::readBuffer);
-		Phobos::UI::HarvesterLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"\u26cf"); // ⛏
-
-		Phobos::UI::HarvesterCounter_ConditionYellow =
-			pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "HarvesterCounter.ConditionYellow", Phobos::UI::HarvesterCounter_ConditionYellow);
-
-		Phobos::UI::HarvesterCounter_ConditionRed =
-			pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "HarvesterCounter.ConditionRed", Phobos::UI::HarvesterCounter_ConditionRed);
-
-		Phobos::UI::ShowProducingProgress =
-			pINI_UIMD->ReadBool(SIDEBAR_SECTION, "ProducingProgress.Show", false);
-
-		Phobos::UI::ShowPowerDelta =
-			pINI_UIMD->ReadBool(SIDEBAR_SECTION, "PowerDelta.Show", false);
-
-		Phobos::UI::PowerDelta_ConditionYellow =
-			pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "PowerDelta.ConditionYellow", Phobos::UI::PowerDelta_ConditionYellow);
-
-		Phobos::UI::PowerDelta_ConditionRed =
-			pINI_UIMD->ReadDouble(SIDEBAR_SECTION, "PowerDelta.ConditionRed", Phobos::UI::PowerDelta_ConditionRed);
-	}
-
-	Phobos::CloseConfig(pINI_UIMD);
-
-	CCINIClass* pINI = Phobos::OpenConfig((const char*)0x826260);
-	Phobos::Config::ArtImageSwap = pINI->ReadBool("General", "ArtImageSwap", false);
-	Phobos::CloseConfig(pINI);
-
-	return 0;
-}
-
-DEFINE_HOOK(0x66E9DF, RulesClass_Process_Phobos, 0x8)
-{
-	GET(CCINIClass*, rulesINI, EDI);
-
-	// Ares tags
-	Phobos::Config::DevelopmentCommands = rulesINI->ReadBool("GlobalControls", "DebugKeysEnabled", Phobos::Config::DevelopmentCommands);
-	Phobos::Config::AllowParallelAIQueues = rulesINI->ReadBool("GlobalControls", "AllowParallelAIQueues", Phobos::Config::AllowParallelAIQueues);
 
 	return 0;
 }

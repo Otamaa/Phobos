@@ -11,6 +11,7 @@
 #include <ScenarioClass.h>
 
 #include <Utilities/Macro.h>
+#include <Ext/Scenario/Body.h>
 
 DEFINE_HOOK(0x6DD8B0, TActionClass_Execute, 0x6)
 {
@@ -79,40 +80,12 @@ DEFINE_HOOK(0x6E2EA7, TActionClass_Retint_LightSourceFix, 0x3) // Red
 	// Yeah, we just simply recreating these lightsource...
 	// Stupid but works fine.
 
-	for (auto pBld : *BuildingClass::Array)
-	{
-		if (pBld->LightSource)
-		{
-			GameDelete(pBld->LightSource);
-			if (pBld->Type->LightIntensity)
-			{
-				TintStruct color { pBld->Type->LightRedTint, pBld->Type->LightGreenTint, pBld->Type->LightBlueTint };
+	TActionExt::RecreateLightSources();
 
-				pBld->LightSource = GameCreate<LightSourceClass>(pBld->GetCoords(),
-					pBld->Type->LightVisibility, pBld->Type->LightIntensity, color);
-
-				pBld->LightSource->Activate();
-			}
-		}
-	}
-
-	for (auto pRadSite : *RadSiteClass::Array)
-	{
-		if (pRadSite->LightSource)
-		{
-			auto coord = pRadSite->LightSource->Location;
-			auto color = pRadSite->LightSource->LightTint;
-			auto intensity = pRadSite->LightSource->LightIntensity;
-			auto visibility = pRadSite->LightSource->LightVisibility;
-
-			GameDelete(pRadSite->LightSource);
-
-			pRadSite->LightSource = GameCreate<LightSourceClass>(coord,
-				visibility, intensity, color);
-
-			pRadSite->LightSource->Activate();
-		}
-	}
+	//ScenarioExt::Global()->CurrentTint_Tiles =
+	//ScenarioExt::Global()->CurrentTint_Schemes =
+	ScenarioExt::Global()->CurrentTint_Hashes = ScenarioClass::Instance->NormalLighting.Tint;
 
 	return 0;
 }
+

@@ -5,6 +5,8 @@
 #include <Utilities/Container.h>
 #include <Utilities/TemplateDef.h>
 
+#include <Misc/Otamaa/Ext/SWType/Body.h>
+
 class SWTypeExt
 {
 public:
@@ -26,6 +28,7 @@ public:
 
 		ValueableVector<ValueableVector<int>> LimboDelivery_RandomWeightsData;
 
+		Otamaa::SWTExt::ExtData AnotherData;
 		ExtData(SuperWeaponTypeClass* OwnerObject) : Extension<SuperWeaponTypeClass>(OwnerObject)
 			, Money_Amount { 0 }
 			, UIDescription {}
@@ -37,6 +40,7 @@ public:
 			, LimboKill_Affected { AffectedHouse::Owner }
 			, LimboKill_IDs {}
 			, RandomBuffer { 0.0 }
+			, AnotherData { }
 		{ }
 
 
@@ -44,7 +48,7 @@ public:
 
 		virtual void LoadFromINIFile(CCINIClass* pINI) override;
 		virtual ~ExtData() = default;
-
+		virtual size_t Size() const { return sizeof(*this); }
 		virtual void InvalidatePointer(void* ptr, bool bRemoved) override { }
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;

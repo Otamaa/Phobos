@@ -7,29 +7,31 @@
 #include <Utilities/TemplateDef.h>
 
 #include <Ext/WeaponType/Body.h>
+#include <Phobos.h>
 
 class RadTypeClass;
 
 class RadSiteExt
 {
 public:
+
 	using base_type = RadSiteClass;
 
 	class ExtData final : public Extension<RadSiteClass>
 	{
 	public:
-		Valueable<WeaponTypeClass*> Weapon;
 		Valueable<RadTypeClass*> Type;
-		Valueable<HouseClass*> RadHouse;
-
+		HouseClass* RadHouse;
+		RepeatableTimerStruct ApplycationDelay_I;
+		RepeatableTimerStruct ApplycationDelay_B;
 		ExtData(RadSiteClass* OwnerObject) : Extension<RadSiteClass>(OwnerObject)
-			, RadHouse { nullptr }
-			, Type {}
-			, Weapon { nullptr }
+			, RadHouse { }
+			, Type { }
+			, ApplycationDelay_I { }
+			, ApplycationDelay_B { }
 		{ }
 
 		virtual ~ExtData() = default;
-
 		virtual size_t Size() const
 		{
 			return sizeof(*this);
@@ -42,7 +44,9 @@ public:
 
 		virtual void LoadFromStream(PhobosStreamReader& Stm) override;
 		virtual void SaveToStream(PhobosStreamWriter& Stm) override;
-		virtual void Initialize() override;
+		virtual void InitializeConstants() override;
+
+		void UpdateTimer();
 
 	private:
 		template <typename T>
@@ -50,19 +54,22 @@ public:
 	};
 
 	static DynamicVectorClass<RadSiteExt::ExtData*> Array;
-
 	static void CreateInstance(CellStruct location, int spread, int amount, WeaponTypeExt::ExtData* pWeaponExt, HouseClass* const pOwner);
 	static void CreateLight(RadSiteClass* pThis);
-	static void Add(RadSiteClass* pThis,int amount);
+	static void Add(RadSiteClass* pThis,int amount,HouseClass* pNewOwner);
 	static void SetRadLevel(RadSiteClass* pThis,int amount);
-	static const double GetRadLevelAt(RadSiteClass* pThis,CellStruct const& cell);
+	static double GetRadLevelAt(RadSiteClass* pThis,CellStruct const& cell);
 
 	class ExtContainer final : public Container<RadSiteExt>
 	{
 	public:
 		ExtContainer();
 		~ExtContainer();
+		virtual void InvalidatePointer(void* ptr, bool bRemoved) override;
 	};
 
 	static ExtContainer ExtMap;
+
+	static bool LoadGlobals(PhobosStreamReader& Stm);
+	static bool SaveGlobals(PhobosStreamWriter& Stm);
 };

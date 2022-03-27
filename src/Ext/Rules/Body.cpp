@@ -3,10 +3,17 @@
 #include <Utilities/TemplateDef.h>
 #include <FPSCounter.h>
 #include <GameOptionsClass.h>
+#include <HouseTypeClass.h>
 
 #include <New/Type/RadTypeClass.h>
 #include <New/Type/ShieldTypeClass.h>
 #include <New/Type/LaserTrailTypeClass.h>
+
+#include <Misc/Otamaa/New/Type/ArmorTypeClass.h>
+#include <Misc/Otamaa/New/Type/HoverTypeClass.h>
+#include <Misc/Otamaa/New/Type/MouseCursorTypeClass.h>
+
+#include <Ext/BuildingType/Body.h>
 
 template<> const DWORD Extension<RulesClass>::Canary = 0x12341234;
 std::unique_ptr<RulesExt::ExtData> RulesExt::Data = nullptr;
@@ -28,9 +35,14 @@ void RulesExt::LoadFromINIFile(RulesClass* pThis, CCINIClass* pINI)
 
 void RulesExt::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 {
-	RadTypeClass::LoadFromINIList(pINI);
-	ShieldTypeClass::LoadFromINIList(pINI);
-	LaserTrailTypeClass::LoadFromINIList(&CCINIClass::INI_Art.get());
+	ArmorTypeClass::LoadFromINIList_New(pINI, Phobos::Config::MoreDetailSLDebugLog);
+	HoverTypeClass::LoadFromINIList(pINI, Phobos::Config::MoreDetailSLDebugLog);
+
+	if (!Phobos::Config::DisableCustomRadSite)
+		RadTypeClass::LoadFromINIList(pINI, Phobos::Config::MoreDetailSLDebugLog);
+
+	ShieldTypeClass::LoadFromINIList(pINI, Phobos::Config::MoreDetailSLDebugLog);
+	LaserTrailTypeClass::LoadFromINIList(&CCINIClass::INI_Art.get(), Phobos::Config::MoreDetailSLDebugLog);
 
 	Data->LoadBeforeTypeData(pThis, pINI);
 }
@@ -43,16 +55,10 @@ void RulesExt::LoadAfterTypeData(RulesClass* pThis, CCINIClass* pINI)
 	Data->LoadAfterTypeData(pThis, pINI);
 }
 
-void RulesExt::ExtData::InitializeConstants()
-{
-
-}
+void RulesExt::ExtData::InitializeConstants() { }
 
 // earliest loader - can't really do much because nothing else is initialized yet, so lookups won't work
-void RulesExt::ExtData::LoadFromINIFile(CCINIClass* pINI)
-{
-
-}
+void RulesExt::ExtData::LoadFromINIFile(CCINIClass* pINI) { Debug::Log(__FUNCTION__" Called ! \n"); }
 
 void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 {
@@ -61,64 +67,88 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	if (!pData)
 		return;
 
-	const char* sectionAITargetTypes = "AITargetTypes";
-	const char* sectionAIScriptsList = "AIScriptsList";
-
 	INI_EX exINI(pINI);
 
+	this->AnotherData.Read_LoadBeforeTypeData(exINI);
 	this->Storage_TiberiumIndex.Read(exINI, GENERAL_SECTION, "Storage.TiberiumIndex");
+	this->InfantryGainSelfHealCap.Read(exINI, GENERAL_SECTION, "InfantryGainSelfHealCap");
+	this->UnitsGainSelfHealCap.Read(exINI, GENERAL_SECTION, "UnitsGainSelfHealCap");
 	this->RadApplicationDelay_Building.Read(exINI, "Radiation", "RadApplicationDelay.Building");
 	this->Pips_Shield.Read(exINI, "AudioVisual", "Pips.Shield");
 	this->Pips_Shield_Buildings.Read(exINI, "AudioVisual", "Pips.Shield.Building");
 	this->MissingCameo.Read(pINI, "AudioVisual", "MissingCameo");
 	this->JumpjetAllowLayerDeviation.Read(exINI, "JumpjetControls", "AllowLayerDeviation");
+	this->UseTerrainRadarColor.Read(exINI, "AudioVisual", "UseTerrainRadarColor");
+	this->UseTiberiumRadarColor.Read(exINI, "AudioVisual", "UseTiberiumRadarColor");
 
-	// Section AITargetTypes
-	int itemsCount = pINI->GetKeyCount(sectionAITargetTypes);
-	for (int i = 0; i < itemsCount; ++i)
-	{
-		DynamicVectorClass<TechnoTypeClass*> objectsList;
-		char* context = nullptr;
-		pINI->ReadString(sectionAITargetTypes, pINI->GetKeyName(sectionAITargetTypes, i), "", Phobos::readBuffer);
+	this->Pips_SelfHeal_Infantry.Read(exINI, "AudioVisual", "Pips.SelfHeal.Infantry");
+	this->Pips_SelfHeal_Units.Read(exINI, "AudioVisual", "Pips.SelfHeal.Units");
+	this->Pips_SelfHeal_Buildings.Read(exINI, "AudioVisual", "Pips.SelfHeal.Buildings");
+}
 
-		for (char *cur = strtok_s(Phobos::readBuffer, Phobos::readDelims, &context); cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
-		{
-			TechnoTypeClass* buffer;
-			if (Parser<TechnoTypeClass*>::TryParse(cur, &buffer))
-				objectsList.AddItem(buffer);
-			else
-				Debug::Log("DEBUG: [AITargetTypes][%d]: Error parsing [%s]\n", AITargetTypesLists.Count, cur);
-		}
+void RulesExt::LoadEarlyBeforeColor(RulesClass* pThis, CCINIClass* pINI)
+{
+	Debug::Log(__FUNCTION__" Called ! \n");
 
-		AITargetTypesLists.AddItem(objectsList);
-		objectsList.Clear();
-	}
+	if (!Phobos::Config::DisableCustomRadSite)
+		RadTypeClass::AddDefaults();
 
-	// Section AIScriptsList
-	int scriptitemsCount = pINI->GetKeyCount(sectionAIScriptsList);
-	for (int i = 0; i < scriptitemsCount; ++i)
-	{
-		DynamicVectorClass<ScriptTypeClass*> objectsList;
+	HoverTypeClass::AddDefaults();
+	ArmorTypeClass::AddDefaults();
 
-		char* context = nullptr;
-		pINI->ReadString(sectionAIScriptsList, pINI->GetKeyName(sectionAIScriptsList, i), "", Phobos::readBuffer);
+	if (_strcmpi(Phobos::Config::PCName, "DESKTOP-QT5G8K6"))
+		Phobos::Config::DevelopmentCommands = pINI->ReadBool("GlobalControls", "DebugKeysEnabled", Phobos::Config::DevelopmentCommands);
 
-		for (char *cur = strtok_s(Phobos::readBuffer, Phobos::readDelims, &context); cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
-		{
-			ScriptTypeClass* pNewScript = GameCreate<ScriptTypeClass>(cur);
-			objectsList.AddItem(pNewScript);
-		}
+	Phobos::Config::DisableCustomRadSite = pINI->ReadBool("Phobos", "DisableCustomRadSite", false);
+	Phobos::Config::ArtImageSwap = pINI->ReadBool("General", "ArtImageSwap", false);
+	Phobos::Config::MoreDetailSLDebugLog = pINI->ReadBool("General", "MoreDetailSLDebugLog", false);
+	Phobos::Config::AllowParallelAIQueues = pINI->ReadBool("GlobalControls", "AllowParallelAIQueues", false);
 
-		AIScriptsLists.AddItem(objectsList);
-		objectsList.Clear();
-	}
 }
 
 // this runs between the before and after type data loading methods for rules ini
 void RulesExt::ExtData::InitializeAfterTypeData(RulesClass* const pThis)
 {
+	Debug::Log(__FUNCTION__" Called ! \n");
 
+	//AttachEffectTypeClass::AddDefault();
 }
+
+namespace ObjectTypeParser
+{
+	template<typename T>
+	void Exec(CCINIClass* pINI, DynamicVectorClass<DynamicVectorClass<T*>>& nVecDest, const char* pKey, bool bUseParser = false, bool bDebug = true)
+	{
+		for (int i = 0; i < pINI->GetKeyCount(pKey); ++i)
+		{
+			DynamicVectorClass<T*> _Buffer;
+			char* context = nullptr;
+			pINI->ReadString(pKey, pINI->GetKeyName(pKey, i), "", Phobos::readBuffer);
+
+			for (char* cur = strtok_s(Phobos::readBuffer, Phobos::readDelims, &context);
+				cur; cur = strtok_s(nullptr, Phobos::readDelims, &context))
+			{
+				T* buffer;
+
+				if (bUseParser)
+					Parser<T*>::TryParse(cur, &buffer);
+				else
+					buffer = T::FindOrAllocate(cur);
+
+				if (buffer)
+					_Buffer.AddItem(buffer);
+				else
+				{
+					if (bDebug)
+						Debug::Log("ObjectTypeParser DEBUG: [%s][%d]: Error parsing [%s]\n", pKey, nVecDest.Count, cur);
+				}
+			}
+
+			nVecDest.AddItem(_Buffer);
+			_Buffer.Clear();
+		}
+	}
+};
 
 // this should load everything that TypeData is not dependant on
 // i.e. InfantryElectrocuted= can go here since nothing refers to it
@@ -130,7 +160,19 @@ void RulesExt::ExtData::LoadAfterTypeData(RulesClass* pThis, CCINIClass* pINI)
 	if (!pData)
 		return;
 
+	//const char* pAudioVisual = "AudioVisual";
+	const char* sectionAITargetTypes = "AITargetTypes";
+	const char* sectionAIScriptsList = "AIScriptsList";
+	const char* sectionAIHousesList = "AIHousesList";
+
 	INI_EX exINI(pINI);
+
+	Data->AnotherData.Read_LoadAfterTypeData(exINI);
+
+	// Section AITargetTypes
+	ObjectTypeParser::Exec(pINI, AITargetTypesLists, sectionAITargetTypes, true);
+	ObjectTypeParser::Exec(pINI, AIScriptsLists, sectionAIScriptsList , Phobos::Config::MoreDetailSLDebugLog);
+	ObjectTypeParser::Exec(pINI, AIHousesLists, sectionAIHousesList, Phobos::Config::MoreDetailSLDebugLog);
 }
 
 bool RulesExt::DetailsCurrentlyEnabled()
@@ -150,6 +192,10 @@ bool RulesExt::DetailsCurrentlyEnabled(int const minDetailLevel)
 		&& DetailsCurrentlyEnabled();
 }
 
+void RulesExt::LoadBeforeGeneralData(RulesClass* pThis, CCINIClass* pINI) { Debug::Log(__FUNCTION__" Called ! \n"); }
+
+void RulesExt::LoadAfterAllLogicData(RulesClass* pThis, CCINIClass* pINI) { Debug::Log(__FUNCTION__" Called ! \n"); }
+
 // =============================
 // load / save
 
@@ -166,7 +212,18 @@ void RulesExt::ExtData::Serialize(T& Stm)
 		.Process(this->JumpjetAllowLayerDeviation)
 		.Process(this->AITargetTypesLists)
 		.Process(this->AIScriptsLists)
+		.Process(this->AIHousesLists)
 		.Process(this->Storage_TiberiumIndex)
+		.Process(this->InfantryGainSelfHealCap)
+		.Process(this->UnitsGainSelfHealCap)
+		.Process(this->UseTerrainRadarColor)
+		.Process(this->UseTiberiumRadarColor)
+
+		.Process(this->AnotherData)
+
+		.Process(this->Pips_SelfHeal_Infantry)
+		.Process(this->Pips_SelfHeal_Units)
+		.Process(this->Pips_SelfHeal_Buildings)
 		;
 }
 
@@ -291,6 +348,39 @@ DEFINE_HOOK(0x679CAF, RulesData_LoadAfterTypeData, 0x5)
 	GET(CCINIClass*, pINI, ESI);
 
 	RulesExt::LoadAfterTypeData(pItem, pINI);
+
+	return 0;
+}
+
+DEFINE_HOOK(0x66D530, RulesData_LoadBeforeGeneralData, 0x6)
+{
+	GET(RulesClass*, pItem, ECX);
+	GET_STACK(CCINIClass*, pINI, 0x4);
+
+	RulesExt::LoadBeforeGeneralData(pItem, pINI);
+
+	return 0;
+}
+
+DEFINE_HOOK(0x668F6A, RulesData_LoadAfterAllLogicData, 0x5)
+{
+	GET(RulesClass*, pItem, EDI);
+	GET(CCINIClass*, pINI, ESI);
+
+	RulesExt::LoadAfterAllLogicData(pItem, pINI);
+
+	return 0;
+}
+
+DEFINE_HOOK(0x679CAF, RulesClass_LoadAfterTypeData_CompleteInitialization, 0x5)
+{
+	//GET(CCINIClass*, pINI, ESI);
+
+	for (auto const& pType : *BuildingTypeClass::Array)
+	{
+		auto const pExt = BuildingTypeExt::ExtMap.Find(pType);
+		pExt->CompleteInitialization();
+	}
 
 	return 0;
 }
