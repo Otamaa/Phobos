@@ -5,12 +5,12 @@ class TechnoClass;
 class TechnoTypeClass;
 struct AresData
 {
-	static  HMODULE AresDllHmodule;
+	static HMODULE AresDllHmodule;
 	static uintptr_t AresBaseAddress;
 
 	struct HandleConvert
 	{
-		static DWORD Offset;
+		static DWORD FunctionOffset;
 		static DWORD CallableAddress;
 
 		static void __stdcall Exec(TechnoClass* pTechno, TechnoTypeClass* pConvertTo);

@@ -15,7 +15,9 @@ constexpr const wchar_t* ARES_DLL = L"Ares.dll";
 constexpr const char* ARES_DLL_S = "Ares.dll";
 
 DWORD AresData::HandleConvert::CallableAddress = 0x0;
-DWORD AresData::HandleConvert::Offset = 0x44130;
+DWORD AresData::HandleConvert::FunctionOffset = 0x44130;
+uintptr_t AresData::AresBaseAddress = 0x0;
+HMODULE AresData::AresDllHmodule = nullptr;
 
 std::filesystem::path get_module_path(HMODULE module)
 {
@@ -55,10 +57,10 @@ void AresData::Init()
 	Ares_dll_Fullpath = (g_target_executable_path.parent_path() / ARES_DLL).wstring();
 	AresData::AresBaseAddress = GetModuleBaseAddress(ARES_DLL_S);
 
-	HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::Offset;
+	HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::FunctionOffset;
 }
 
-void __stdcall AresData::HandleConvert::Exec(TechnoClass*, TechnoTypeClass*)
+void __stdcall AresData::HandleConvert::Exec(TechnoClass* pTechno, TechnoTypeClass* pConvertTo)
 {
 	JMP_STD(HandleConvert::CallableAddress);
 }
