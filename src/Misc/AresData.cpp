@@ -57,7 +57,10 @@ void AresData::Init()
 	Ares_dll_Fullpath = (g_target_executable_path.parent_path() / ARES_DLL).wstring();
 	AresData::AresBaseAddress = GetModuleBaseAddress(ARES_DLL_S);
 
-	HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::FunctionOffset;
+	if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, Ares_dll_Fullpath.c_str(), &AresDllHmodule))
+	{
+		HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::FunctionOffset;
+	}
 }
 
 void __stdcall AresData::HandleConvert::Exec(TechnoClass* pTechno, TechnoTypeClass* pConvertTo)

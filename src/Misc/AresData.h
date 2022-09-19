@@ -8,6 +8,9 @@ struct AresData
 	static HMODULE AresDllHmodule;
 	static uintptr_t AresBaseAddress;
 
+
+	// Add new function here
+	// use Function name As struct name
 	struct HandleConvert
 	{
 		static DWORD FunctionOffset;
