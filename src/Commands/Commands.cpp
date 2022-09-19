@@ -1,6 +1,5 @@
 #include "Commands.h"
 
-#include "Dummy.h"
 #include "ObjectInfo.h"
 #include "NextIdleHarvester.h"
 #include "QuickSave.h"

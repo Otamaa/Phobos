@@ -1,0 +1,64 @@
+#include "AresData.h"
+
+#include <ASMMacros.h>
+#include <Phobos.h>
+
+#include <filesystem>
+#include <tlhelp32.h>
+
+class TechnoClass;
+class TechnoTypeClass;
+
+static std::filesystem::path  g_target_executable_path;
+static std::wstring Ares_dll_Fullpath;
+constexpr const wchar_t* ARES_DLL = L"Ares.dll";
+constexpr const char* ARES_DLL_S = "Ares.dll";
+
+DWORD AresData::HandleConvert::CallableAddress = 0x0;
+DWORD AresData::HandleConvert::Offset = 0x44130;
+
+std::filesystem::path get_module_path(HMODULE module)
+{
+	WCHAR buf[4096];
+	return GetModuleFileNameW(module, buf, ARRAYSIZE(buf)) ? buf : std::filesystem::path();
+}
+
+uintptr_t GetModuleBaseAddress(const char* modName)
+{
+	HANDLE hCurrentProcess = GetCurrentProcess();
+	uintptr_t modBaseAddr = 0;
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetProcessId(hCurrentProcess));
+	if (hSnap != INVALID_HANDLE_VALUE)
+	{
+		MODULEENTRY32 modEntry { };
+		modEntry.dwSize = sizeof(modEntry);
+		if (Module32First(hSnap, &modEntry))
+		{
+			do
+			{
+				if (!_strcmpi(modEntry.szModule, modName))
+				{
+					modBaseAddr = (uintptr_t)modEntry.modBaseAddr;
+					break;
+				}
+			}
+			while (Module32Next(hSnap, &modEntry));
+		}
+	}
+	CloseHandle(hSnap);
+	return modBaseAddr;
+}
+
+void AresData::Init()
+{
+	g_target_executable_path = get_module_path(nullptr);
+	Ares_dll_Fullpath = (g_target_executable_path.parent_path() / ARES_DLL).wstring();
+	AresData::AresBaseAddress = GetModuleBaseAddress(ARES_DLL_S);
+
+	HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::Offset;
+}
+
+void __stdcall AresData::HandleConvert::Exec(TechnoClass*, TechnoTypeClass*)
+{
+	JMP_STD(HandleConvert::CallableAddress);
+}
