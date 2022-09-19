@@ -9,8 +9,6 @@
 class TechnoClass;
 class TechnoTypeClass;
 
-static std::filesystem::path  g_target_executable_path;
-static std::wstring Ares_dll_Fullpath;
 constexpr const wchar_t* ARES_DLL = L"Ares.dll";
 constexpr const char* ARES_DLL_S = "Ares.dll";
 
@@ -53,11 +51,9 @@ uintptr_t GetModuleBaseAddress(const char* modName)
 
 void AresData::Init()
 {
-	g_target_executable_path = get_module_path(nullptr);
-	Ares_dll_Fullpath = (g_target_executable_path.parent_path() / ARES_DLL).wstring();
 	AresData::AresBaseAddress = GetModuleBaseAddress(ARES_DLL_S);
 
-	if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, Ares_dll_Fullpath.c_str(), &AresDllHmodule))
+	if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, ARES_DLL, &AresDllHmodule))
 	{
 		HandleConvert::CallableAddress = AresData::AresBaseAddress + HandleConvert::FunctionOffset;
 	}
